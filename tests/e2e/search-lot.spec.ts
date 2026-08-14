@@ -1,36 +1,24 @@
 import { test, expect } from '@playwright/test';
+import { SearchPage } from '../../pages/SearchPage';
+import { SearchResultsPage } from '../../pages/SearchResultsPage';
+import { LotPage } from '../../pages/LotPage';
 
 test('user can search for Train and inspect the second lot @smoke @e2e', async ({ page }) => {
-    await page.goto('/');
-
-    const header = page.getByRole('banner');
-
-    const searchInput = header.getByRole('combobox', {
-            name: 'Search for brand, model, artist...',
-        });
-
-    const searchButton = header.getByRole('button', {
-            name: 'Search',
-        });
-
-    await searchInput.fill('Train');
-    await searchButton.click();
-
-    const lots = page.locator(
-            '[data-testid^="lot-card-container-"]'
-        );
-
-    expect(await lots.count()).toBeGreaterThan(1);
+    const searchPage = new SearchPage(page);
+    const searchResultsPage = new SearchResultsPage(page);
+    const lotPage = new LotPage(page);
     
-    const secondLot = lots.nth(1);
+    await searchPage.goto();
 
-    const selectedTitle = await secondLot
-        .locator('.c-lot-card__title')
-        .textContent();
+    await searchPage.searchFor('Train');
 
-    const lotLink = secondLot.getByRole('link');
+    expect(
+        await searchResultsPage.lots.count()
+    ).toBeGreaterThan(1);
+    
+    const selectedTitle = await searchResultsPage.getLotTitle(1);
 
-    const href = await lotLink.getAttribute('href');
+    const href = await searchResultsPage.getLotHref(1);
 
     expect(selectedTitle).toBeTruthy();
     expect(href).toBeTruthy();
@@ -39,33 +27,17 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
 
     expect(lotId).toBeTruthy();
 
-    await lotLink.click();
+    await searchResultsPage.openLot(1);
 
     await expect(page).toHaveURL(new RegExp(`/l/${lotId}`));
 
-    const lotTitle = page.getByRole('heading', { level: 1 });
+    await expect(lotPage.title).toHaveText(selectedTitle!.trim());
 
-    await expect(lotTitle).toHaveText(selectedTitle!.trim());
-
-    const favouriteButton = page.getByTitle('favourite').first();
-
-    const favouriteText = await favouriteButton.textContent();
-
-    expect(favouriteText).toBeTruthy();
-
-    const favourites = Number(favouriteText?.trim());
+    const favourites = await lotPage.getFavouriteCount();
 
     expect(favourites).toBeGreaterThanOrEqual(0);
 
-    const bidSection = page.getByTestId('lot-bid-status-section');
-
-    await expect(
-            bidSection.getByText('Current bid')
-        ).toBeVisible();
-
-    const bidText = await bidSection.textContent();
-
-    const currentBid = bidText?.match(/€\s*\d[\d,.]*/)?.[0];
+    const currentBid = await lotPage.getCurrentBid();
 
     expect(currentBid).toBeTruthy();
 
