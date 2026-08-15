@@ -141,7 +141,7 @@ Potentially valuable under different environmental or organizational conditions,
 | ID | Scenario | Layer | Priority | CI Target | Status |
 |---|---|---|---|---|---|
 | E2E-001 | Search `Train` → open second lot → validate lot details and identity | E2E / Smoke | P0 | PR | Implemented |
-| E2E-002 | Nonsense search → appropriate empty state | E2E / Negative | P1 | PR | Planned |
+| E2E-002 | Nonsense search → no exact results message + related-object fallback | E2E / Negative | P1 | PR | Implemented |
 | API-001 | Second Train search lot has consistent bidding API state | UI/API Integration + Contract | P1 | PR | Implemented |
 | API-002 | Lot navigation remains internally consistent | API + Contract | P1 | PR | Implemented |
 | A11Y-001 | Landing page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
@@ -214,30 +214,32 @@ These values are informational output rather than fixed expected data.
 
 # 7. P1 Coverage
 
-## E2E-002 — Search With No Results
+## E2E-002 — Search With No Exact Results
 
 **Layer:** E2E / Negative  
 **Priority:** P1  
 **CI target:** Pull Request  
-**Status:** Planned
+**Status:** Implemented
 
 ```gherkin
-Scenario: User searches for a query with no matching lots
+Scenario: User searches for a query with no exact matches
 
   Given I am on the Catawiki landing page
   When I search for a deterministic nonsense query
   Then the search should complete successfully
-  And no matching lots should be displayed
-  And an appropriate empty-results state should be shown
+  And the application should indicate that no exact results were found
+  And related objects should be displayed as a fallback
 ```
 
 ### Test intent
 
-The existing smoke scenario validates the successful search path.
+The initial expectation was that a nonsense query would produce an empty-results state.
 
-This test adds a fundamentally different application state rather than another variation of the successful search.
+Exploration showed that Catawiki instead provides a fallback experience: it informs the user that no exact results were found and displays related objects.
 
-It validates that the application handles a valid search with no matching lots gracefully.
+The automated test therefore validates the real product behavior rather than an assumed empty state.
+
+The test does not assert the exact number of related objects because that value is dynamic production data.
 
 
 ## A11Y-001 — Landing Page Accessibility

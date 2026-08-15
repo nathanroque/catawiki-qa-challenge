@@ -44,3 +44,29 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
             currentBid,
         });
 });
+
+test('user sees related objects when search has no exact results @e2e @negative', async ({page}) => {
+
+    const searchPage = new SearchPage(page);
+    const searchResultsPage = new SearchResultsPage(page);
+
+    await searchPage.goto();
+
+    await searchPage.searchFor(
+        'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'
+    );
+
+    await expect(
+    page.getByText(
+        'No exact results. Check out these related objects.'
+    )
+    ).toBeVisible();
+
+    expect(
+    await searchResultsPage.lots.count()
+    ).toBeGreaterThan(0);
+
+    await expect(
+    page.getByTestId('object-amount')
+    ).toContainText('related objects');
+});

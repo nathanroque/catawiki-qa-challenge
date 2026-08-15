@@ -183,3 +183,23 @@ Schema validation is intentionally kept separate from business assertions.
 For example, validating that `current_position` is an integer is a contract check, while validating that the next lot position equals the current position plus one is a business invariant.
 
 Only fields relevant to the implemented scenarios are validated to avoid unnecessarily coupling the suite to the complete API implementation.
+
+## 12. Negative Search Behavior
+
+A negative search scenario was initially planned as a traditional zero-results test.
+
+During exploratory execution, Catawiki showed a different behavior: when no exact matches are found, the application displays the message:
+
+`No exact results. Check out these related objects.`
+
+and continues by presenting related lots.
+
+The test was adjusted to validate this actual fallback behavior rather than forcing an assumed empty state.
+
+The final scenario verifies that:
+
+- the no-exact-results message is displayed;
+- related lot cards are present;
+- the result summary identifies the displayed items as related objects.
+
+The exact related-object count is intentionally not asserted because it is dynamic production data.
