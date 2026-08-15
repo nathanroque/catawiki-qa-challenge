@@ -132,4 +132,10 @@ The implementation will prioritize:
 5. P2 coverage when time permits
 6. Experimental techniques only when they provide clear additional value
 
+Exploratory evidence may change the selected testing layer or priority of an existing scenario.
+
+For example, if normal user interaction reveals a stable, read-only JSON contract, API coverage may become higher value than previously assumed.
+
+Such changes should be reflected in the test plan while preserving the same risk, maintainability and production-safety criteria.
+
 A test should earn its place in the suite through the confidence it provides rather than simply demonstrating that a particular tool or technique can be used.

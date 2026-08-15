@@ -42,6 +42,10 @@ Scenario: User can search for Train and inspect the second lot
 
 Search results and auction information are dynamic production data.
 
+The primary E2E journey uses the English locale explicitly (`/en`) to avoid environment-dependent redirects and localized locator behavior.
+
+Locale switching and translation behavior are covered separately by the internationalization scenarios.
+
 The suite should therefore avoid relying on fixed lot titles, IDs, favourite counts, bid values or other volatile production data whenever possible.
 
 
@@ -138,6 +142,8 @@ Potentially valuable under different environmental or organizational conditions,
 |---|---|---|---|---|---|
 | E2E-001 | Search `Train` → open second lot → validate lot details and identity | E2E / Smoke | P0 | PR | Implemented |
 | E2E-002 | Nonsense search → appropriate empty state | E2E / Negative | P1 | PR | Planned |
+| API-001 | Bidding state exposes a valid contract and business invariants | API / Contract | P1 | PR | Planned |
+| API-002 | Lot navigation preserves adjacency and auction-position invariants | API / Integration | P1 | PR | Planned |
 | A11Y-001 | Landing page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
 | A11Y-002 | Search results have no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
 | A11Y-003 | Lot page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
@@ -550,33 +556,125 @@ This remains a candidate rather than a current priority.
 
 # 12. API, Contract and Integration Testing
 
-API, contract and UI/API integration coverage were considered during initial exploration.
+Initial browser exploration showed that the main search result page is server-rendered rather than backed by a dedicated JSON search endpoint.
 
-However, no stable JSON API surface suitable for responsible external production automation has been identified so far.
-
-The observed search navigation uses an HTTP request similar to:
+For example:
 
 ```text
 GET /en/s?q=Train
 ```
 
-with an HTML document response.
+returns an HTML document containing serialized Next.js data.
 
-The current decision is therefore:
+However, further network reconnaissance identified several read-only JSON endpoints used by the public application during normal unauthenticated browsing.
+
+The most relevant candidates are:
 
 ```text
-API testing         → Deferred
-Contract testing    → Deferred
-UI/API integration  → Deferred
+GET /buyer/api/v3/bidding/lots?ids={lotIds}
+GET /buyer/api/v3/lots/{lotId}/navigation
+GET /buyer/api/v3/lots/{lotId}/bids
 ```
 
-This does not imply that Catawiki has no APIs.
+Direct requests to these endpoints can be executed without authentication or prior browser navigation when the client explicitly requests JSON:
 
-It only means that no suitable interface has been identified through normal user interaction during this assessment.
+```http
+Accept: application/json
+```
 
-Scraping HTML solely to label a test as "API testing", or deliberately probing undocumented internal services, would provide questionable additional value and could introduce unnecessary risk.
+No authenticated session or manually supplied cookies are required.
 
-With access to documented internal APIs or a controlled test environment, these layers should be reconsidered.
+## Testing Strategy
+
+API tests should focus on structural contracts and business invariants rather than exact production values.
+
+For example, bidding-state tests may validate:
+
+- The response is successful JSON.
+- Returned lot IDs belong to the requested set.
+- Lot and auction identifiers are valid positive values.
+- Favourite counts are non-negative.
+- Bidding start and end timestamps are valid and correctly ordered.
+- Missing required parameters produce an appropriate validation response.
+
+Navigation tests may validate:
+
+- `current_position` remains within `1..total_lots`.
+- Adjacent lots preserve consistent auction size.
+- A next lot reports the original lot as its previous lot.
+- Moving to the next lot increments the current position by one.
+
+Exact values such as bids, favourite counts, lot ordering and auction state should not be hard-coded because they represent live production data.
+
+## Search API Consideration
+
+The main search flow should not be represented as a pure API test because its primary response is server-rendered HTML.
+
+Extracting `__NEXT_DATA__` may be useful for higher-level integration analysis, but it is not currently prioritized over the clearer JSON contracts above.
+
+## Planned API Coverage
+
+### API-001 — Bidding State Contract
+
+**Layer:** API / Contract  
+**Priority:** P1  
+**CI target:** Pull Request  
+**Status:** Planned
+
+```gherkin
+Scenario: Active lot bidding state exposes a valid public contract
+
+  Given I have a valid active lot identifier
+  When I request the lot bidding state
+  Then the API response should be successful
+  And the requested lot should be represented
+  And the bidding data should satisfy its structural and business invariants
+```
+
+#### Test intent
+
+This scenario validates a read-only JSON contract used by the public application.
+
+Assertions should focus on stable properties such as identifiers, types, timestamp ordering and non-negative counters rather than exact live auction values.
+
+A complementary negative assertion may verify that omitting the required `ids` parameter returns an appropriate validation response.
+
+### API-002 — Lot Navigation Consistency
+
+**Layer:** API / Integration  
+**Priority:** P1  
+**CI target:** Pull Request  
+**Status:** Planned
+
+```gherkin
+Scenario: Auction navigation remains internally consistent
+
+  Given I have a valid lot with an adjacent lot
+  When I request its navigation information
+  And I request the navigation information for the next lot
+  Then the next lot position should follow the original position
+  And the next lot should reference the original lot as its previous lot
+  And both lots should belong to the same navigation sequence
+```
+
+#### Test intent
+
+This test validates relationships across multiple API responses rather than only checking individual response fields.
+
+The assertions deliberately avoid hard-coded lot IDs, auction positions or auction sizes.
+
+## Production Safety
+
+Only read-only endpoints observed during normal anonymous user interaction should be automated.
+
+The suite should not:
+
+- Probe arbitrary undocumented services.
+- Attempt to bypass authentication, authorization or anti-automation controls.
+- Exercise state-changing API operations.
+- Generate unnecessary traffic against the production environment.
+
+The objective of API coverage is to validate high-value public behavior exposed during normal application usage, not to reverse-engineer or stress internal services.
 
 
 # 13. Authenticated and State-Changing Testing
@@ -648,12 +746,20 @@ should be validated according to their purpose.
 
 Identity information may be compared across pages, while continuously changing values should normally be validated structurally rather than against fixed expected values.
 
+API tests should follow the same principle.
+
+Where possible, lot identifiers should be discovered from current application data rather than treated as permanent fixtures.
+
+When production data must be referenced, assertions should validate structural and relational invariants rather than assume that a particular lot, auction position or bidding value will remain unchanged.
+
 
 # 15. Cookie and Environment Handling
 
-Cookie consent and locale-related UI may appear in fresh browser contexts.
+Cookie consent and locale handling are explicit environment preconditions for the E2E suite.
 
-These are treated primarily as test-environment concerns rather than business requirements of the assignment.
+The primary journey should navigate directly to the English locale.
+
+If the consent dialog is present, the automation should dismiss it through the user-facing decline/continue-without-accepting action and verify that the dialog is actually removed before interacting with the application.
 
 Where handling is required, automation should:
 
@@ -815,6 +921,8 @@ Target coverage:
 ```text
 TypeScript type check
         ↓
+High-value API checks
+        ↓
 Critical Chromium smoke
         ↓
 Negative search scenario
@@ -900,6 +1008,8 @@ Potential initial tags include:
 @accessibility
 @i18n
 @visual
+@api
+@contract
 ```
 
 Example usage:
@@ -1032,7 +1142,9 @@ Rejected because production traffic should not be intentionally increased for an
 
 ## Arbitrary internal API probing
 
-Rejected because undocumented internal interfaces should not be treated as an authorized testing surface.
+Rejected because discovering or probing arbitrary undocumented services would exceed the intended scope of the assessment.
+
+This does not exclude read-only JSON endpoints naturally observed during normal anonymous application usage. Such endpoints may be considered when they provide clear testing value, require no access-control bypass and can be exercised safely with minimal production traffic.
 
 
 ## Clone of the Catawiki pages
@@ -1057,9 +1169,10 @@ Potential future coverage includes:
 - Controlled data creation and cleanup
 - Bidding workflows
 - Purchase workflows
-- API functional testing
-- Contract/schema validation
-- UI/API consistency testing
+- Authenticated API testing
+- State-changing API workflows
+- Broader API contract coverage using documented internal specifications
+- Deeper UI/API consistency testing
 - Network mocking
 - Service virtualization
 - Failure injection
@@ -1140,6 +1253,8 @@ AI can support activities such as:
 - Reviewing implementation alternatives
 - Improving documentation
 - Debugging assistance
+
+AI-assisted browser exploration was also used to support network reconnaissance and identify read-only application behavior worth evaluating for API coverage.
 
 Playwright Codegen was also used as an exploratory locator-discovery tool.
 
