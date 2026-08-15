@@ -1,0 +1,61 @@
+# ADR 003 — Page Object Model
+
+## Context
+
+The initial critical journey was implemented directly in the test file to validate the behavior before introducing abstractions.
+
+Once the flow was stable, repeated page-specific interactions and selectors became clear enough to justify separating page knowledge from test expectations.
+
+## Decision
+
+Use small Page Objects to encapsulate page-specific interactions and selectors.
+
+The responsibilities are divided as follows:
+
+- `SearchPage` handles search interactions.
+- `SearchResultsPage` represents search results and lot selection.
+- `LotPage` exposes information and interactions from the lot details page.
+
+Tests remain responsible for business expectations and assertions.
+
+## Reasons
+
+- Reduces duplication of selectors and page interactions
+- Improves readability of test scenarios
+- Centralizes maintenance when page structure changes
+- Encourages reuse across future scenarios
+- Keeps tests focused on expected behavior rather than implementation details
+
+## Alternatives considered
+
+### Keep all interactions inside test files
+
+This keeps simple tests very explicit, but would introduce duplication as the suite grows.
+
+### Create generic helper functions
+
+Helpers could reduce duplication, but they would not represent the domain and page structure as clearly as Page Objects.
+
+## Trade-offs
+
+Page Objects introduce additional files and abstraction.
+
+Overly large or generic Page Objects can hide test intent and become difficult to maintain, so they should remain small and focused on page-specific responsibilities.
+
+Assertions should generally remain in the tests unless they represent page readiness or another page-specific invariant.
+
+## Extension to API Interactions
+
+The same separation principle was later applied to repeated HTTP interactions.
+
+A small `CatawikiApiClient` was introduced to encapsulate API-specific knowledge such as endpoint paths and common request headers.
+
+This is not intended to turn the Page Object Model into a generic abstraction layer. The two abstractions serve different boundaries:
+
+- Page Objects encapsulate page-specific UI interactions and selectors.
+- `CatawikiApiClient` encapsulates request construction for selected read-only endpoints.
+- Tests remain responsible for contract expectations, business invariants and cross-layer assertions.
+
+The client was introduced only after repeated API request configuration appeared in implemented tests, following the same preference for evidence-based abstraction used when introducing the Page Objects.
+
+Keeping assertions outside the client prevents HTTP helpers from hiding the behavior that each test is intended to validate.
