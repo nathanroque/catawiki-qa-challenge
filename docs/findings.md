@@ -42,6 +42,18 @@ Headless Chromium can receive an `Access Denied` response from the production ed
 
 The suite does not attempt to circumvent this behavior. Local browser execution is therefore configured to run headed by default, while unattended CI execution remains subject to the production environment constraint.
 
+### GitHub-hosted CI execution
+
+After introducing the initial GitHub Actions workflow, the read-only API test was executed from a GitHub-hosted Ubuntu runner.
+
+The repository checkout, dependency installation, and TypeScript type check completed successfully, but the production feed API request returned `403 Forbidden / Access Denied`.
+
+This indicates that the production edge restrictions observed during local headless browser execution also affect at least some requests originating from the GitHub-hosted CI environment.
+
+The workflow does not attempt to bypass this restriction through altered headers, retries, or other anti-automation workarounds.
+
+Production-facing automated scenarios are therefore kept outside the current GitHub-hosted workflow, while static validation remains suitable for unattended CI execution.
+
 ### Accessibility scan execution cost
 
 Individual accessibility scans were reliable during exploratory execution, but

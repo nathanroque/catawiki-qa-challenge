@@ -958,17 +958,42 @@ The suite should not attempt to circumvent anti-automation or production securit
 
 Before unattended CI execution against production is enabled, an appropriate execution strategy must be identified.
 
+### GitHub-hosted runners
+
+The initial GitHub Actions execution confirmed an additional production-environment constraint.
+
+Repository setup, dependency installation, and TypeScript validation completed successfully on the GitHub-hosted Ubuntu runner. However, the read-only production API scenario received a `403 Forbidden / Access Denied` response from the production edge layer.
+
+The current hosted workflow therefore does not execute production-facing API or browser scenarios.
+
+This restriction should not be worked around through spoofed client behavior, arbitrary retries, or attempts to bypass the production edge controls.
+
 
 ## 20. CI/CD Strategy
-The desired CI architecture should balance fast pull-request feedback with broader scheduled coverage.
 
-The implementation must also respect the current production execution constraints.
+The CI strategy should balance useful automated feedback with the constraints of testing against the public Catawiki production environment.
 
-Accessibility scans currently act as regression and reporting signals rather than strict zero-violation PR gates because the production environment contains pre-existing high-severity automated findings outside the scope of this project.
-
+The initial GitHub Actions workflow was intentionally kept small so that the execution environment could be validated before introducing broader production-facing coverage.
 
 ### Pull Request Pipeline
-Target coverage:
+
+Current GitHub-hosted coverage:
+
+```text
+Dependency installation
+        ↓
+TypeScript type check
+```
+
+The initial workflow also attempted to execute the pure read-only API scenario.
+
+Repository checkout, dependency installation, and TypeScript validation completed successfully, but the production API request received a `403 Forbidden / Access Denied` response from the Catawiki production edge layer.
+
+Production-facing API and browser scenarios are therefore intentionally excluded from the current GitHub-hosted workflow.
+
+The workflow should not attempt to bypass this restriction through altered client behavior, spoofed headers, arbitrary retries, or other anti-automation workarounds.
+
+With an approved execution environment that can access the production application normally, the intended pull-request coverage could expand to include:
 
 ```text
 TypeScript type check
@@ -979,19 +1004,20 @@ Critical Chromium smoke
         ↓
 Negative search scenario
         ↓
-Accessibility regression reporting when the execution environment permits
+Accessibility regression reporting
 ```
 
-The PR pipeline should prioritize:
+The pull-request pipeline should prioritize:
 
-- Speed
 - Reliability
+- Fast feedback
+- Useful failure diagnostics
+- Production safety
 - High-value regression detection
-- Useful developer feedback
-
 
 ### Nightly Pipeline
-Target coverage:
+
+With an appropriate execution environment, broader scheduled coverage could include:
 
 ```text
 Broader E2E suite
@@ -1007,11 +1033,15 @@ Optional visual validation
 
 The nightly pipeline can accept a larger execution cost in exchange for broader confidence.
 
-
 ### Important constraint
-Actual automated execution against the production site depends on resolving or accommodating the current headless execution limitation without circumventing Catawiki security controls.
 
-The pipeline architecture can still be implemented and documented even if some production jobs cannot initially execute unattended.
+Actual automated execution against the production site depends on using an execution environment accepted by the Catawiki production edge layer.
+
+Both local headless browser execution and the initial GitHub-hosted API execution have received `Access Denied` responses.
+
+The suite should not attempt to circumvent these production security controls.
+
+The current GitHub-hosted pipeline therefore provides deterministic static validation, while production-facing automated scenarios remain suitable for controlled local execution or a future approved CI environment.
 
 
 ## 21. Cross-Browser Strategy

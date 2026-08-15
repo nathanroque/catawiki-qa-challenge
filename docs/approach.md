@@ -298,4 +298,14 @@ Mandatory API requests were updated to include the HTTP status, status text, and
 
 Automatic retries were intentionally not added because different HTTP failures such as throttling, access restrictions, or transient server errors require different investigation and should not be hidden behind generic retry logic.
 
-Repeated execution after these changes produced three consecutive successful full-suite runs.
+### CI environment validation
+
+The first GitHub Actions workflow was intentionally limited to TypeScript validation and the pure read-only API scenario so that browser installation and UI execution were not introduced before the production environment behavior was understood.
+
+During the first pull-request execution, repository setup, dependency installation, and TypeScript validation completed successfully. The API scenario then received a `403 Forbidden / Access Denied` response from the production edge layer.
+
+Rather than attempting to make the GitHub-hosted runner resemble a normal customer session or introducing retries around an access restriction, production-facing test execution was removed from the current hosted workflow.
+
+The resulting CI pipeline keeps deterministic static validation automated while acknowledging that production-facing scenarios require an execution environment accepted by the Catawiki production edge layer.
+
+Before introducing the hosted CI workflow, repeated local execution after the reliability changes produced three consecutive successful full-suite runs.
