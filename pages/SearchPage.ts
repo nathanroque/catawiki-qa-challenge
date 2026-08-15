@@ -32,6 +32,8 @@ export class SearchPage {
       name: 'Search',
     });
 
+    await dismissCookieConsentIfPresent(this.page);
+
     await searchInput.fill(term);
     await searchButton.click();
   }

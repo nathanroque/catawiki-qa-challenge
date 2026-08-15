@@ -126,9 +126,9 @@ Potentially valuable under different environmental or organizational conditions,
 | E2E-002 | Nonsense search → no exact results message + related-object fallback | E2E / Negative | P1 | PR | Implemented |
 | API-001 | Second Train search lot has consistent bidding API state | UI/API Integration + Contract | P1 | PR | Implemented |
 | API-002 | Lot navigation remains internally consistent | API + Contract | P1 | PR | Implemented |
-| A11Y-001 | Landing page accessibility scan with known-issue baseline | Accessibility | P1 | Scheduled / Report | Implemented |
-| A11Y-002 | Search results accessibility regression scan | Accessibility | P1 | Scheduled / Report | Planned |
-| A11Y-003 | Lot page accessibility regression scan | Accessibility | P1 | Scheduled / Report | Planned |
+| A11Y-001 | Landing page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
+| A11Y-002 | Search results page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
+| A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
 | XB-001 | Critical journey runs across Chromium, Firefox and WebKit | Cross-browser | P1 | Nightly | Planned |
 | E2E-003 | Search handles benign special characters gracefully | E2E / Edge | P2 | Nightly | Candidate |
 | I18N-001 | Selected language persists across the critical journey | Internationalization | P2 | Nightly | Candidate |
@@ -235,11 +235,11 @@ Scenario: Landing page has no unexpected high-severity accessibility violations
 
 The landing page is scanned with `@axe-core/playwright` to provide an automated accessibility regression signal.
 
-The initial scan was intentionally configured to fail on any `serious` or `critical` finding. Repeated exploratory execution showed a stable set of existing high-severity axe rule IDs in the production application.
+The initial scan was intentionally configured to fail on any `serious` or `critical` finding. Repeated exploratory and full-suite execution identified a known set of existing high-severity axe rule IDs in the production application.
 
 Because this project does not control the Catawiki production code, leaving the test permanently failing on those existing findings would reduce its value as a regression signal. The implemented scenario therefore uses an explicit known-issue baseline and fails when a new high-severity violation rule appears outside that baseline.
 
-The baseline is maintained by axe violation rule ID rather than exact affected-node count. Across repeated runs, the same rule IDs remained stable while the number of affected nodes varied for dynamic content such as color-contrast findings.
+The baseline is maintained by axe violation rule ID rather than exact affected-node count. The exact set present in an individual execution and the number of affected nodes may vary because the production page contains dynamic and conditionally rendered content. A known rule is therefore not required to appear in every execution.
 
 Known findings remain visible in the test output for diagnostic and review purposes. The baseline is intended to make existing findings explicit, not to classify them as acceptable product behavior.
 
@@ -264,7 +264,7 @@ Automated axe findings are quality signals and should not be treated as proof of
 **Layer:** Accessibility  
 **Priority:** P1  
 **CI target:** Scheduled / Report  
-**Status:** Planned
+**Status:** Implemented
 
 ```gherkin
 Scenario: Search results have no unexpected high-severity accessibility violations
@@ -276,25 +276,69 @@ Scenario: Search results have no unexpected high-severity accessibility violatio
   Then no unexpected serious or critical accessibility violation rules should be found
 ```
 
-The search-results scenario should first be executed exploratorily. If stable existing production findings are observed, they should be reviewed and baselined explicitly rather than silently ignored or assumed to match the landing-page baseline.
+#### Test intent
 
-### A11Y-003 — Lot Page Accessibility
+The search-results page is scanned independently from the landing page so that
+existing accessibility findings remain specific to the page context in which
+they were observed.
+
+Repeated exploratory execution identified the following known high-severity
+rule IDs:
+
+```text
+button-name
+color-contrast
+svg-img-alt
+```
+
+`button-name` and `svg-img-alt` were consistently observed during the initial
+isolated executions. `color-contrast` was additionally observed during
+full-suite execution on dynamic lot countdown content.
+
+The baseline therefore represents rule categories confirmed within this page
+context rather than rules that must appear in every execution.
+
+### A11Y-003 — Lot Details Accessibility
 
 **Layer:** Accessibility  
 **Priority:** P1  
 **CI target:** Scheduled / Report  
-**Status:** Planned
+**Status:** Implemented
 
 ```gherkin
-Scenario: Lot page has no unexpected high-severity accessibility violations
+Scenario: Lot details page has no unexpected high-severity accessibility violations
 
   Given I have searched for "Train"
-  And I have opened a lot from the results
+  And I have opened the second lot from the results
   When I run an automated accessibility scan
   Then no unexpected serious or critical accessibility violation rules should be found
 ```
 
-The lot-page scenario should establish its own observed baseline if existing findings are consistently present. Baselines should remain page-context-specific unless repeated implementation demonstrates that sharing them is both accurate and maintainable.
+#### Test intent
+
+The lot-details page is scanned using its own accessibility baseline rather
+than inheriting findings from either the landing page or search-results page.
+
+Repeated exploratory execution identified the following known high-severity
+rule IDs:
+
+```text
+button-name
+color-contrast
+link-name
+scrollable-region-focusable
+svg-img-alt
+```
+
+`button-name`, `color-contrast`, `scrollable-region-focusable`, and
+`svg-img-alt` were observed across all exploratory executions.
+
+`link-name` was observed in one execution and was not reproduced in subsequent
+isolated scans. Because the finding was confirmed within the lot-details
+context, it remains part of the known baseline.
+
+Affected-node counts varied between executions, so the baseline remains based
+on rule IDs rather than exact counts.
 
 #### Accessibility scope
 
@@ -755,6 +799,17 @@ Reusable handling may later be moved into common test setup if repetition justif
 
 Cookie handling should support the tests rather than become an unnecessary framework of its own.
 
+Repeated full-suite execution also showed that the consent component may finish
+initializing after the initial page-navigation handling has completed.
+
+For interactions that can be blocked by a late consent overlay, the environment
+support utility may therefore be invoked again immediately before the relevant
+interaction.
+
+This is intentionally preferred over forcing Playwright clicks through the
+overlay because the goal is to reproduce a valid user interaction rather than
+bypass an active UI layer.
+
 
 ## 16. Reliability Strategy
 The suite should prioritize deterministic execution and useful failure diagnostics.
@@ -775,6 +830,29 @@ Retries should not be used to conceal unreliable tests.
 
 A retry may be useful in CI for additional diagnostic information, but repeated failures should still be investigated as reliability problems.
 
+Mandatory API requests include the HTTP status and response body in failure
+messages when a non-success response is received.
+
+This helps distinguish contract or business-rule failures from transient or
+environmental HTTP failures without introducing automatic retries that could
+hide instability.
+
+### Accessibility execution isolation
+
+Repeated full-suite execution showed that running multiple full-page axe scans
+concurrently could increase execution time enough to exceed the default test
+timeout.
+
+Accessibility scenarios are therefore executed serially and use a dedicated
+60-second timeout while the remainder of the suite retains normal parallel
+execution.
+
+This keeps the broader suite fast while isolating the higher execution cost of
+full-page accessibility analysis.
+
+The timeout adjustment is scoped to accessibility tests rather than applied
+globally because unrelated scenarios have not demonstrated a general need for
+a longer execution budget.
 
 ## 17. Execution Timing and Performance Considerations
 Performance is an important quality characteristic, but the current environment is not suitable for meaningful performance testing.
@@ -969,7 +1047,7 @@ This provides broader compatibility coverage without unnecessarily increasing fe
 ## 22. Test Tags
 Tags can allow the same suite to support different execution strategies without duplicating tests.
 
-Potential initial tags include:
+Current and potential tags include:
 
 ```text
 @smoke
@@ -979,7 +1057,7 @@ Potential initial tags include:
 @i18n
 @visual
 @api
-@contract
+@integration
 ```
 
 Example usage:

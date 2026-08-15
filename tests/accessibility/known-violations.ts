@@ -19,3 +19,13 @@ export const searchResultsKnownViolationIds = [
   'color-contrast',
   'svg-img-alt',
 ];
+
+export const lotDetailsKnownViolationIds = [
+  // Existing production accessibility debt observed
+  // during repeated lot-details scans.
+  'button-name',
+  'color-contrast',
+  'link-name',
+  'scrollable-region-focusable',
+  'svg-img-alt',
+];

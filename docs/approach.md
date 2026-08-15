@@ -65,7 +65,7 @@ During implementation, different behavior was observed between browser execution
 - Headless Chromium received an `Access Denied` response.
 - Fresh browser contexts may display cookie and locale-related UI.
 
-These behaviors were treated as environmental concerns rather than being hidden through longer timeouts or arbitrary waits.
+These behaviors were treated as environmental concerns rather than being hidden through arbitrary waits or broad timeout increases.
 
 The headless behavior remains an item to investigate before introducing CI execution.
 
@@ -216,11 +216,9 @@ Rather than suppressing the findings or allowing the accessibility test to remai
 
 The landing page was scanned repeatedly before defining the baseline.
 
-Across three consecutive executions, the same nine high-severity violation rule IDs were consistently detected, while the number of affected DOM nodes varied for some rules due to dynamic production content.
+Repeated exploratory and full-suite execution identified a known set of high-severity violation rule IDs. The exact set present in an individual execution and the number of affected DOM nodes may vary because the production page contains dynamic and conditionally rendered content.
 
-For example, the `color-contrast` rule remained present in every execution while the number of affected nodes changed.
-
-For this reason, the baseline is defined by axe violation ID rather than exact node count.
+For this reason, the baseline is defined by axe violation ID rather than requiring every known rule to appear in every execution or comparing exact node counts.
 
 The test:
 
@@ -262,3 +260,42 @@ The underlying design boundary remains unchanged:
 - The API client describes how to call selected read-only HTTP endpoints.
 - Tests describe expected behavior and assertions.
 - Named test steps describe the scenario narrative shown in reports.
+
+## 15. Reliability Hardening Through Repeated Execution
+
+After the initial P0, API, integration, negative, and accessibility scenarios were implemented, the complete suite was executed repeatedly to identify reliability problems that were not visible when tests were run in isolation.
+
+This exposed several distinct failure modes that were intentionally addressed at their source rather than through broad timeout increases or unconditional retries.
+
+### Accessibility execution cost
+
+The three full-page axe scans were reliable when executed independently, but parallel full-suite execution occasionally caused accessibility scenarios to exceed Playwright's default test timeout.
+
+Rather than reducing parallelism across the entire project, accessibility execution was isolated:
+
+```ts
+test.describe.configure({
+  mode: 'serial',
+  timeout: 60_000,
+});
+```
+
+This keeps the higher execution cost scoped to accessibility analysis while allowing the remainder of the suite to retain normal parallel execution.
+
+### Late cookie-consent initialization
+
+Repeated execution also revealed that the Usercentrics consent component can finish initializing after the initial navigation-time consent handling has completed.
+
+In one failure, the search button was already visible and enabled, but the consent overlay intercepted pointer events until the test timed out.
+
+The existing consent utility is therefore also invoked immediately before search interaction when needed. Forcing the click through the overlay was intentionally rejected because it would bypass a real user-facing UI state rather than handle it correctly.
+
+### API failure diagnostics
+
+A repeated API execution produced a non-success response that was previously reported only as a failed `response.ok()` assertion.
+
+Mandatory API requests were updated to include the HTTP status, status text, and response body when they fail.
+
+Automatic retries were intentionally not added because different HTTP failures such as throttling, access restrictions, or transient server errors require different investigation and should not be hidden behind generic retry logic.
+
+Repeated execution after these changes produced three consecutive successful full-suite runs.

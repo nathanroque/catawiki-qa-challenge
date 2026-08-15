@@ -31,7 +31,12 @@ test('second Train search lot has consistent bidding API state @api @integration
       const biddingResponse =
         await api.getBiddingState(lotId);
 
-      expect(biddingResponse.ok()).toBeTruthy();
+      if (!biddingResponse.ok()) {
+        throw new Error(
+          `Bidding request failed: ${biddingResponse.status()} ${biddingResponse.statusText()}\n` +
+          await biddingResponse.text()
+        );
+      }
 
       return biddingResponse.json();
     }

@@ -11,7 +11,13 @@ test('auction navigation remains internally consistent @api', async ({
     'Discover a current lot with an adjacent lot',
     async () => {
       const feedResponse = await api.getFeedLots();
-      expect(feedResponse.ok()).toBeTruthy();
+
+      if (!feedResponse.ok()) {
+        throw new Error(
+          `Feed request failed: ${feedResponse.status()} ${feedResponse.statusText()}\n` +
+          await feedResponse.text()
+        );
+      }
 
       const feedBody = await feedResponse.json();
       expect(feedBody.lots.length).toBeGreaterThan(0);
@@ -57,7 +63,12 @@ test('auction navigation remains internally consistent @api', async ({
       const nextNavigationResponse =
         await api.getLotNavigation(nextLotId);
 
-      expect(nextNavigationResponse.ok()).toBeTruthy();
+      if (!nextNavigationResponse.ok()) {
+        throw new Error(
+          `Next lot navigation request failed: ${nextNavigationResponse.status()} ${nextNavigationResponse.statusText()}\n` +
+          await nextNavigationResponse.text()
+        );
+      }
 
       const nextNavigation = await nextNavigationResponse.json();
       validateLotNavigationSchema(nextNavigation);
