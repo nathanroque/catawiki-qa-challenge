@@ -147,3 +147,23 @@ than through the automated axe baseline.
 It demonstrates one limitation of relying exclusively on automated accessibility
 scanning: interactive elements without semantic interactive roles may not always
 be classified by rules such as `button-name`.
+
+### Search results accessibility
+
+Repeated scans of the `Train` search results page identified the following
+high-severity axe rule IDs:
+
+- `button-name` — critical
+- `color-contrast` — serious
+- `svg-img-alt` — serious
+
+`button-name` and `svg-img-alt` were present across the initial isolated
+executions.
+
+During full-suite execution, `color-contrast` was additionally detected on
+multiple lot countdown elements. The affected text used a contrast ratio of
+3.07:1 against a white background, below the 4.5:1 threshold reported by axe.
+
+The number of affected nodes also varied between execution contexts. This
+reinforces the decision to baseline known accessibility findings by rule ID
+rather than exact violation count.

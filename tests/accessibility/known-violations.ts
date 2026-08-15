@@ -11,3 +11,11 @@ export const landingPageKnownViolationIds = [
   'scrollable-region-focusable',
   'svg-img-alt',
 ];
+
+export const searchResultsKnownViolationIds = [
+  // Existing production accessibility debt observed
+  // during repeated search-results scans.
+  'button-name',
+  'color-contrast',
+  'svg-img-alt',
+];
