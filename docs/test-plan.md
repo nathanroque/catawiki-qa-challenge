@@ -1,7 +1,5 @@
 # Test Plan
-
 ## 1. Purpose
-
 This document defines the testing scope for the Catawiki QA challenge after completion of the initial required search-to-lot journey.
 
 The goal is not to maximize the number of automated tests, but to build a small, representative, maintainable and production-conscious test suite that demonstrates different software quality techniques.
@@ -22,7 +20,6 @@ Lower-priority scenarios should only be implemented if the higher-priority suite
 
 
 ## 2. Test Context
-
 The system under test is the public Catawiki production website.
 
 The initial assignment journey is:
@@ -50,16 +47,13 @@ The suite should therefore avoid relying on fixed lot titles, IDs, favourite cou
 
 
 ## 3. Test Principles
-
 ### Test behavior rather than current production data
-
 The suite should express the expected behavior rather than encode the current state of production.
 
 For example, the second search result should be selected by position instead of depending on its current lot title.
 
 
 ### Prefer stable and user-facing locators
-
 Locator priority is approximately:
 
 1. Accessible roles and names
@@ -71,7 +65,6 @@ DOM structure and generated styling classes should be avoided whenever practical
 
 
 ### Avoid fixed volatile assertions
-
 Auction data changes continuously.
 
 Instead of:
@@ -88,65 +81,54 @@ the suite should validate properties such as:
 
 
 ### No arbitrary waits
-
 Tests should rely on Playwright auto-waiting and web-first assertions rather than fixed `waitForTimeout()` calls.
 
 
 ### Tests should be independently executable
-
 No test should depend on another test being executed first.
 
 
 ### Production interactions must remain non-destructive
-
 The production guardrails defined in ADR 004 apply to all scenarios in this plan.
 
 
 ### Additional tests must justify their cost
-
 A technically interesting test is not automatically a valuable test.
 
 New scenarios should provide a meaningful quality signal without introducing disproportionate maintenance cost, instability or production risk.
 
 
 ## 4. Priority Model
-
 ### P0 — Critical
-
 Required for the core assignment and expected to remain highly reliable.
 
 
 ### P1 — High Value
-
 Adds meaningful confidence or demonstrates an important additional quality dimension at reasonable implementation and maintenance cost.
 
 
 ### P2 — Stretch
-
 Useful additional coverage that should only be implemented after P0 and P1 are stable.
 
 
 ### Experimental
-
 Demonstrates an interesting testing technique, but should not be treated as the primary test oracle.
 
 
 ### Deferred
-
 Potentially valuable under different environmental or organizational conditions, but deliberately not implemented within the current constraints.
 
 
 ## 5. Coverage Overview
-
 | ID | Scenario | Layer | Priority | CI Target | Status |
 |---|---|---|---|---|---|
 | E2E-001 | Search `Train` → open second lot → validate lot details and identity | E2E / Smoke | P0 | PR | Implemented |
 | E2E-002 | Nonsense search → no exact results message + related-object fallback | E2E / Negative | P1 | PR | Implemented |
 | API-001 | Second Train search lot has consistent bidding API state | UI/API Integration + Contract | P1 | PR | Implemented |
 | API-002 | Lot navigation remains internally consistent | API + Contract | P1 | PR | Implemented |
-| A11Y-001 | Landing page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
-| A11Y-002 | Search results have no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
-| A11Y-003 | Lot page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
+| A11Y-001 | Landing page accessibility scan with known-issue baseline | Accessibility | P1 | Scheduled / Report | Implemented |
+| A11Y-002 | Search results accessibility regression scan | Accessibility | P1 | Scheduled / Report | Planned |
+| A11Y-003 | Lot page accessibility regression scan | Accessibility | P1 | Scheduled / Report | Planned |
 | XB-001 | Critical journey runs across Chromium, Firefox and WebKit | Cross-browser | P1 | Nightly | Planned |
 | E2E-003 | Search handles benign special characters gracefully | E2E / Edge | P2 | Nightly | Candidate |
 | I18N-001 | Selected language persists across the critical journey | Internationalization | P2 | Nightly | Candidate |
@@ -154,10 +136,8 @@ Potentially valuable under different environmental or organizational conditions,
 | VIS-001 | Stable UI region matches approved visual baseline | Visual | P2 | Nightly | Candidate |
 
 
-# 6. P0 Coverage
-
-## E2E-001 — Critical Search-to-Lot Journey
-
+## 6. P0 Coverage
+### E2E-001 — Critical Search-to-Lot Journey
 **Layer:** E2E / Smoke  
 **Priority:** P0  
 **CI target:** Pull Request  
@@ -176,8 +156,7 @@ Scenario: User can search for Train and inspect the second lot
   And I should be able to retrieve the current bid
 ```
 
-### Test intent
-
+#### Test intent
 This scenario represents the critical journey requested by the assignment.
 
 Before navigation, the test captures runtime information about the selected lot. After navigation, that information is used to ensure the application opened the same lot rather than simply confirming that any lot page loaded.
@@ -185,8 +164,7 @@ Before navigation, the test captures runtime information about the selected lot.
 The title consistency validation remains part of this scenario rather than being duplicated into another E2E test unless a future requirement creates a meaningful reason to separate it.
 
 
-### Volatile data
-
+#### Volatile data
 Values such as:
 
 - Current bid
@@ -199,8 +177,7 @@ are discovered dynamically during execution.
 The test validates their existence, structure and consistency instead of comparing them against hard-coded production values.
 
 
-### Assignment output
-
+#### Assignment output
 The scenario records:
 
 ```text
@@ -212,10 +189,8 @@ current bid
 These values are informational output rather than fixed expected data.
 
 
-# 7. P1 Coverage
-
-## E2E-002 — Search With No Exact Results
-
+## 7. P1 Coverage
+### E2E-002 — Search With No Exact Results
 **Layer:** E2E / Negative  
 **Priority:** P1  
 **CI target:** Pull Request  
@@ -231,8 +206,7 @@ Scenario: User searches for a query with no exact matches
   And related objects should be displayed as a fallback
 ```
 
-### Test intent
-
+#### Test intent
 The initial expectation was that a nonsense query would produce an empty-results state.
 
 Exploration showed that Catawiki instead provides a fallback experience: it informs the user that no exact results were found and displays related objects.
@@ -242,64 +216,96 @@ The automated test therefore validates the real product behavior rather than an 
 The test does not assert the exact number of related objects because that value is dynamic production data.
 
 
-## A11Y-001 — Landing Page Accessibility
+### A11Y-001 — Landing Page Accessibility Scan
 
 **Layer:** Accessibility  
 **Priority:** P1  
-**CI target:** Pull Request  
-**Status:** Planned
+**CI target:** Scheduled / Report  
+**Status:** Implemented
 
 ```gherkin
-Scenario: Landing page has no high-severity automated accessibility violations
+Scenario: Landing page has no unexpected high-severity accessibility violations
 
   Given I am on the Catawiki landing page
-  When I run an automated accessibility scan
-  Then no serious or critical accessibility violations should be reported
+  When an automated accessibility scan is executed
+  Then no unexpected serious or critical accessibility violation rules should be found
 ```
 
+#### Test intent
 
-## A11Y-002 — Search Results Accessibility
+The landing page is scanned with `@axe-core/playwright` to provide an automated accessibility regression signal.
+
+The initial scan was intentionally configured to fail on any `serious` or `critical` finding. Repeated exploratory execution showed a stable set of existing high-severity axe rule IDs in the production application.
+
+Because this project does not control the Catawiki production code, leaving the test permanently failing on those existing findings would reduce its value as a regression signal. The implemented scenario therefore uses an explicit known-issue baseline and fails when a new high-severity violation rule appears outside that baseline.
+
+The baseline is maintained by axe violation rule ID rather than exact affected-node count. Across repeated runs, the same rule IDs remained stable while the number of affected nodes varied for dynamic content such as color-contrast findings.
+
+Known findings remain visible in the test output for diagnostic and review purposes. The baseline is intended to make existing findings explicit, not to classify them as acceptable product behavior.
+
+Current landing-page baseline:
+
+```text
+aria-hidden-focus
+aria-required-children
+aria-required-parent
+button-name
+color-contrast
+link-name
+nested-interactive
+scrollable-region-focusable
+svg-img-alt
+```
+
+Automated axe findings are quality signals and should not be treated as proof of complete WCAG compliance or as independently confirmed product defects without appropriate review.
+
+### A11Y-002 — Search Results Accessibility
 
 **Layer:** Accessibility  
 **Priority:** P1  
-**CI target:** Pull Request  
+**CI target:** Scheduled / Report  
 **Status:** Planned
 
 ```gherkin
-Scenario: Search results have no high-severity automated accessibility violations
+Scenario: Search results have no unexpected high-severity accessibility violations
 
   Given I am on the Catawiki landing page
   When I search for "Train"
   And the search results are displayed
-  Then no serious or critical automated accessibility violations should be reported
+  And an automated accessibility scan is executed
+  Then no unexpected serious or critical accessibility violation rules should be found
 ```
 
+The search-results scenario should first be executed exploratorily. If stable existing production findings are observed, they should be reviewed and baselined explicitly rather than silently ignored or assumed to match the landing-page baseline.
 
-## A11Y-003 — Lot Page Accessibility
+### A11Y-003 — Lot Page Accessibility
 
 **Layer:** Accessibility  
 **Priority:** P1  
-**CI target:** Pull Request  
+**CI target:** Scheduled / Report  
 **Status:** Planned
 
 ```gherkin
-Scenario: Lot page has no high-severity automated accessibility violations
+Scenario: Lot page has no unexpected high-severity accessibility violations
 
   Given I have searched for "Train"
   And I have opened a lot from the results
   When I run an automated accessibility scan
-  Then no serious or critical accessibility violations should be reported
+  Then no unexpected serious or critical accessibility violation rules should be found
 ```
 
-### Accessibility scope
+The lot-page scenario should establish its own observed baseline if existing findings are consistently present. Baselines should remain page-context-specific unless repeated implementation demonstrates that sharing them is both accurate and maintainable.
 
-Automated accessibility testing provides a useful baseline but does not prove complete WCAG compliance.
+#### Accessibility scope
+
+Automated accessibility testing provides a useful regression signal but does not prove complete WCAG compliance.
 
 Manual accessibility analysis remains outside the scope of this assignment.
 
+Accessibility scans currently act as reporting and regression checks rather than strict zero-violation PR gates because the production environment contains pre-existing automated findings outside the scope of this project.
 
-## XB-001 — Cross-Browser Critical Journey
 
+### XB-001 — Cross-Browser Critical Journey
 **Layer:** Cross-browser E2E  
 **Priority:** P1  
 **CI target:** Nightly  
@@ -322,17 +328,14 @@ Examples:
   | WebKit   |
 ```
 
-### Test strategy
-
+#### Test strategy
 The same Playwright test implementation should be reused through Playwright project configuration rather than duplicating test code for each browser.
 
 Broader browser coverage is better suited to scheduled execution than to every local development iteration.
 
 
-# 8. P2 / Stretch Coverage
-
-## E2E-003 — Special Character Search
-
+## 8. P2 / Stretch Coverage
+### E2E-003 — Special Character Search
 **Layer:** E2E / Edge  
 **Priority:** P2  
 **CI target:** Nightly  
@@ -347,17 +350,14 @@ Scenario: Search handles benign special characters gracefully
   And a valid search state should be displayed
 ```
 
-### Test intent
-
+#### Test intent
 This scenario provides a lightweight robustness check around search input handling.
 
 It should remain limited to normal user input and should not evolve into fuzzing, injection testing or security probing against production.
 
 
-# 9. Internationalization Coverage
-
-## I18N-001 — Language Selection and Persistence
-
+## 9. Internationalization Coverage
+### I18N-001 — Language Selection and Persistence
 **Layer:** Internationalization / E2E  
 **Priority:** P2  
 **CI target:** Nightly  
@@ -377,8 +377,7 @@ Scenario: Selected language persists throughout the critical journey
   And stable interface elements should continue to use the selected language
 ```
 
-### Test strategy
-
+#### Test strategy
 The primary assertions should remain deterministic.
 
 The test can validate:
@@ -392,8 +391,7 @@ The test can validate:
 The test should avoid using lot titles, seller-provided content or other user-generated data as translation assertions.
 
 
-## I18N-002 — Language Recognition Heuristic
-
+### I18N-002 — Language Recognition Heuristic
 **Layer:** Internationalization  
 **Priority:** Experimental  
 **CI target:** Nightly  
@@ -409,8 +407,7 @@ Scenario: Application interface predominantly matches the selected language
   Then the predominant detected language should correspond to the selected language
 ```
 
-### Test intent
-
+#### Test intent
 Language recognition could provide an additional signal that a page has not unexpectedly fallen back to another language.
 
 However, language detection should not be the primary test oracle.
@@ -430,10 +427,8 @@ For that reason, language analysis should preferably use only application-owned 
 A detection failure should be interpreted carefully rather than automatically proving a localization defect.
 
 
-# 10. Visual Coverage
-
-## VIS-001 — Stable UI Visual Regression
-
+## 10. Visual Coverage
+### VIS-001 — Stable UI Visual Regression
 **Layer:** Visual  
 **Priority:** P2  
 **CI target:** Nightly  
@@ -447,8 +442,7 @@ Scenario: Stable application UI has no unexpected visual regression
   Then it should match the approved visual baseline within the configured tolerance
 ```
 
-### Test strategy
-
+#### Test strategy
 Dynamic auction cards are poor initial visual baseline candidates because they may contain continuously changing:
 
 - Images
@@ -463,19 +457,17 @@ A smaller and more deterministic interface region should therefore be preferred.
 Potential candidates include:
 
 - Search component
-- Empty-results state
+- No-exact-results fallback state
 - Stable navigation elements
 
 If no sufficiently deterministic region can be identified, visual regression testing should remain deferred rather than introducing a noisy test.
 
 
-# 11. Scenarios Considered but Not Prioritized
-
+## 11. Scenarios Considered but Not Prioritized
 The following scenarios were considered but currently provide insufficient additional confidence compared with their implementation or maintenance cost.
 
 
-## Empty search
-
+### Empty search
 ```gherkin
 Scenario: User submits an empty search
 
@@ -487,8 +479,7 @@ Scenario: User submits an empty search
 Potentially useful, but it overlaps substantially with other search input validation scenarios.
 
 
-## Whitespace-only search
-
+### Whitespace-only search
 ```gherkin
 Scenario: User submits a whitespace-only search
 
@@ -502,8 +493,7 @@ This represents approximately the same risk class as empty input.
 Implementing both would likely provide little additional confidence.
 
 
-## Search casing
-
+### Search casing
 Possible inputs include:
 
 ```text
@@ -515,29 +505,25 @@ TRAIN
 Case handling is worth considering, but running several nearly identical E2E scenarios would increase execution cost without proportionally increasing confidence.
 
 
-## Very long search query
-
+### Very long search query
 A very long input could provide a robustness signal, but it begins moving toward fuzz or boundary testing.
 
 Given that the suite executes against production, this is currently considered low priority.
 
 
-## Specific lot by name
-
+### Specific lot by name
 Selecting a known lot by hard-coded title would couple the test to temporary production data.
 
 The suite should instead discover suitable lots dynamically.
 
 
-## Different result positions
-
+### Different result positions
 The critical journey already proves that a search result can be selected and opened successfully.
 
 Tests that only change the selected position would largely duplicate existing behavior.
 
 
-## Pagination
-
+### Pagination
 Pagination represents a potentially meaningful independent workflow and may be considered later.
 
 A useful pagination test would validate behavior rather than simply retrieving another lot.
@@ -556,8 +542,7 @@ Scenario: User navigates between search result pages
 This remains a candidate rather than a current priority.
 
 
-# 12. API, Contract and Integration Testing
-
+## 12. API, Contract and Integration Testing
 Initial browser exploration showed that the main search result page is server-rendered rather than backed by a dedicated JSON search endpoint.
 
 For example:
@@ -586,8 +571,7 @@ Accept: application/json
 
 No authenticated session or manually supplied cookies are required.
 
-## Testing Strategy
-
+### Testing Strategy
 API tests should focus on structural contracts and business invariants rather than exact production values.
 
 For example, bidding-state tests may validate:
@@ -597,7 +581,6 @@ For example, bidding-state tests may validate:
 - Lot and auction identifiers are valid positive values.
 - Favourite counts are non-negative.
 - Bidding start and end timestamps are valid and correctly ordered.
-- Missing required parameters produce an appropriate validation response.
 
 Navigation tests may validate:
 
@@ -608,21 +591,18 @@ Navigation tests may validate:
 
 Exact values such as bids, favourite counts, lot ordering and auction state should not be hard-coded because they represent live production data.
 
-## Search API Consideration
-
+### Search API Consideration
 The main search flow should not be represented as a pure API test because its primary response is server-rendered HTML.
 
 Extracting `__NEXT_DATA__` may be useful for higher-level integration analysis, but it is not currently prioritized over the clearer JSON contracts above.
 
-## Implemented API Coverage
-
+### Implemented API Coverage
 Both implemented API-related scenarios include runtime validation of the response structures used by the tests.
 
 Contract validation is intentionally limited to fields relevant to the implemented scenarios, while behavioral and cross-response assertions remain in the tests.
 
-### API-001 — Bidding State Contract
-
-**Layer:** API / Contract  
+#### API-001 — Bidding State Contract
+**Layer:** UI/API Integration + Contract  
 **Priority:** P1  
 **CI target:** Pull Request  
 **Status:** Implemented
@@ -640,17 +620,13 @@ Scenario: Second Train search lot has consistent bidding API state
   And its bidding period should be structurally valid
 ```
 
-#### Test intent
-
+##### Test intent
 This scenario validates a read-only JSON contract used by the public application.
 
 Assertions should focus on stable properties such as identifiers, types, timestamp ordering and non-negative counters rather than exact live auction values.
 
-A complementary negative assertion may verify that omitting the required `ids` parameter returns an appropriate validation response.
-
-### API-002 — Lot Navigation Consistency
-
-**Layer:** API / Integration  
+#### API-002 — Lot Navigation Consistency
+**Layer:** API + Contract  
 **Priority:** P1  
 **CI target:** Pull Request  
 **Status:** Implemented
@@ -668,14 +644,12 @@ Scenario: Auction navigation remains internally consistent
   And both lots should belong to the same navigation sequence
 ```
 
-#### Test intent
-
+##### Test intent
 This test validates relationships across multiple API responses rather than only checking individual response fields.
 
 The assertions deliberately avoid hard-coded lot IDs, auction positions or auction sizes.
 
-## Production Safety
-
+### Production Safety
 Only read-only endpoints observed during normal anonymous user interaction should be automated.
 
 The suite should not:
@@ -688,8 +662,7 @@ The suite should not:
 The objective of API coverage is to validate high-value public behavior exposed during normal application usage, not to reverse-engineer or stress internal services.
 
 
-# 13. Authenticated and State-Changing Testing
-
+## 13. Authenticated and State-Changing Testing
 Creating a dedicated production test account was considered.
 
 An authenticated user could enable scenarios involving:
@@ -726,8 +699,7 @@ Persistent production data modification
 These scenarios would become significantly more appropriate with an internal test account and controlled environment.
 
 
-# 14. Test Data Strategy
-
+## 14. Test Data Strategy
 Production auction data is dynamic.
 
 Tests should therefore discover relevant values during execution rather than rely on fixed production records.
@@ -764,8 +736,7 @@ Where possible, lot identifiers should be discovered from current application da
 When production data must be referenced, assertions should validate structural and relational invariants rather than assume that a particular lot, auction position or bidding value will remain unchanged.
 
 
-# 15. Cookie and Environment Handling
-
+## 15. Cookie and Environment Handling
 Cookie consent and locale handling are explicit environment preconditions for the E2E suite.
 
 The primary journey should navigate directly to the English locale.
@@ -785,8 +756,7 @@ Reusable handling may later be moved into common test setup if repetition justif
 Cookie handling should support the tests rather than become an unnecessary framework of its own.
 
 
-# 16. Reliability Strategy
-
+## 16. Reliability Strategy
 The suite should prioritize deterministic execution and useful failure diagnostics.
 
 Current principles include:
@@ -806,8 +776,7 @@ Retries should not be used to conceal unreliable tests.
 A retry may be useful in CI for additional diagnostic information, but repeated failures should still be investigated as reliability problems.
 
 
-# 17. Execution Timing and Performance Considerations
-
+## 17. Execution Timing and Performance Considerations
 Performance is an important quality characteristic, but the current environment is not suitable for meaningful performance testing.
 
 Test execution occurs against an uncontrolled production environment and may be influenced by:
@@ -838,7 +807,6 @@ Critical Search-to-Lot Journey: 6.42s
 ```
 
 ### Purpose of execution timing
-
 Execution timing can help:
 
 - Understand suite execution cost
@@ -852,8 +820,7 @@ These measurements should be treated as telemetry rather than performance test r
 No pass/fail threshold should initially be based on these timings.
 
 
-## Performance testing
-
+### Performance testing
 Load, stress and volume testing will not be performed against Catawiki production.
 
 Generating artificial traffic could:
@@ -867,8 +834,7 @@ Generating artificial traffic could:
 Meaningful performance testing would require explicit authorization, defined performance objectives and an appropriate controlled environment.
 
 
-# 18. Test Steps and Reporting Readability
-
+## 18. Test Steps and Reporting Readability
 Tests should communicate their intent both through code and through generated reports.
 
 Where useful, Playwright test steps can represent meaningful user or validation actions.
@@ -897,18 +863,15 @@ This improves:
 Steps should represent meaningful behavior rather than wrapping every individual Playwright command.
 
 
-# 19. Known Execution Constraint
-
+## 19. Known Execution Constraint
 During local development, different behavior was observed between browser execution modes.
 
 
-## Headed Chromium
-
+### Headed Chromium
 The Catawiki application loads and the critical journey executes successfully.
 
 
-## Headless Chromium
-
+### Headless Chromium
 The production edge layer currently responds with an `Access Denied` page during headless execution.
 
 This behavior is considered an environmental or infrastructure constraint rather than a functional product failure.
@@ -918,15 +881,15 @@ The suite should not attempt to circumvent anti-automation or production securit
 Before unattended CI execution against production is enabled, an appropriate execution strategy must be identified.
 
 
-# 20. CI/CD Strategy
-
+## 20. CI/CD Strategy
 The desired CI architecture should balance fast pull-request feedback with broader scheduled coverage.
 
 The implementation must also respect the current production execution constraints.
 
+Accessibility scans currently act as regression and reporting signals rather than strict zero-violation PR gates because the production environment contains pre-existing high-severity automated findings outside the scope of this project.
 
-## Pull Request Pipeline
 
+### Pull Request Pipeline
 Target coverage:
 
 ```text
@@ -938,7 +901,7 @@ Critical Chromium smoke
         ↓
 Negative search scenario
         ↓
-High-value accessibility checks
+Accessibility regression reporting when the execution environment permits
 ```
 
 The PR pipeline should prioritize:
@@ -949,8 +912,7 @@ The PR pipeline should prioritize:
 - Useful developer feedback
 
 
-## Nightly Pipeline
-
+### Nightly Pipeline
 Target coverage:
 
 ```text
@@ -968,15 +930,13 @@ Optional visual validation
 The nightly pipeline can accept a larger execution cost in exchange for broader confidence.
 
 
-## Important constraint
-
+### Important constraint
 Actual automated execution against the production site depends on resolving or accommodating the current headless execution limitation without circumventing Catawiki security controls.
 
 The pipeline architecture can still be implemented and documented even if some production jobs cannot initially execute unattended.
 
 
-# 21. Cross-Browser Strategy
-
+## 21. Cross-Browser Strategy
 Cross-browser support should be implemented through Playwright projects rather than duplicated tests.
 
 The target browser matrix is:
@@ -1006,8 +966,7 @@ Nightly
 This provides broader compatibility coverage without unnecessarily increasing feedback time for every code change.
 
 
-# 22. Test Tags
-
+## 22. Test Tags
 Tags can allow the same suite to support different execution strategies without duplicating tests.
 
 Potential initial tags include:
@@ -1038,8 +997,7 @@ Tagging should remain simple.
 A tag should exist because it supports a real filtering or execution need, not merely to categorize every possible characteristic of a test.
 
 
-# 23. Failure Diagnostics and Reporting
-
+## 23. Failure Diagnostics and Reporting
 A failed automated test should provide enough information to begin investigation without immediately reproducing the issue locally.
 
 Current or planned diagnostics include:
@@ -1071,8 +1029,7 @@ Inspect trace when available
 Relevant Playwright reports and diagnostic files should be published as CI artifacts when appropriate.
 
 
-# 24. Visual Evidence vs Visual Regression
-
+## 24. Visual Evidence vs Visual Regression
 Validating that an expected image exists is different from visual regression testing.
 
 For example:
@@ -1091,8 +1048,7 @@ Visual regression instead compares rendered appearance against a known baseline.
 The two techniques should not be treated as equivalent.
 
 
-## Image content recognition
-
+### Image content recognition
 Using image recognition to determine whether the lot image actually depicts a train was considered.
 
 Although technically possible, it is currently rejected because it would introduce:
@@ -1107,8 +1063,7 @@ Although technically possible, it is currently rejected because it would introdu
 The technique would therefore represent unnecessary over-engineering for the current scope.
 
 
-# 25. Mocking and Network Stubbing
-
+## 25. Mocking and Network Stubbing
 Playwright can intercept and mock network responses.
 
 However, mocking production responses without knowledge of Catawiki's internal API contracts would result in the test validating assumptions introduced by the test itself.
@@ -1126,40 +1081,33 @@ With access to documented contracts or internal service definitions, mocking cou
 - State combinations that are difficult to reproduce naturally
 
 
-# 26. Scenarios Rejected for the Current Scope
-
+## 26. Scenarios Rejected for the Current Scope
 Some technically possible scenarios were consciously rejected.
 
 
-## Production bidding
-
+### Production bidding
 Rejected because it could directly affect a real auction and create financial consequences.
 
 
-## Production purchasing
-
+### Production purchasing
 Rejected because it creates real transactional state.
 
 
-## Favourite manipulation
-
+### Favourite manipulation
 Rejected because it modifies production state and may generate secondary effects such as analytics or recommendation signals.
 
 
-## Stress and load testing
-
+### Stress and load testing
 Rejected because production traffic should not be intentionally increased for an external assessment.
 
 
-## Arbitrary internal API probing
-
+### Arbitrary internal API probing
 Rejected because discovering or probing arbitrary undocumented services would exceed the intended scope of the assessment.
 
 This does not exclude read-only JSON endpoints naturally observed during normal anonymous application usage. Such endpoints may be considered when they provide clear testing value, require no access-control bypass and can be exercised safely with minimal production traffic.
 
 
-## Clone of the Catawiki pages
-
+### Clone of the Catawiki pages
 Creating a controlled copy of the relevant Catawiki pages would allow broader testing freedom.
 
 However, the resulting suite would primarily validate the recreated application rather than Catawiki itself.
@@ -1169,8 +1117,7 @@ This would reduce the relevance of the exercise and remove many of the real-worl
 For this reason, the production application remains the system under test.
 
 
-# 27. Out of Scope / Future Opportunities
-
+## 27. Out of Scope / Future Opportunities
 With access to an internal staging environment, documented services and controlled test data, the strategy could be expanded significantly.
 
 Potential future coverage includes:
@@ -1196,13 +1143,11 @@ Potential future coverage includes:
 These areas are intentionally documented rather than artificially forced into the current production-based assessment.
 
 
-# 28. Documentation Strategy
-
+## 28. Documentation Strategy
 Different documentation files serve different purposes in the project.
 
 
-## README
-
+### README
 Explains how to consume the project:
 
 - What the project is
@@ -1215,8 +1160,7 @@ Explains how to consume the project:
 - Current limitations
 
 
-## Testing Approach
-
+### Testing Approach
 Explains how the solution evolved:
 
 - Initial exploration
@@ -1227,8 +1171,7 @@ Explains how the solution evolved:
 - Quality expansion reasoning
 
 
-## Test Plan
-
+### Test Plan
 Explains:
 
 - What should be tested
@@ -1238,8 +1181,7 @@ Explains:
 - What was considered but intentionally deferred
 
 
-## ADRs
-
+### ADRs
 Record architectural decisions and their trade-offs.
 
 Current examples include:
@@ -1252,8 +1194,7 @@ Current examples include:
 The documents should complement each other rather than repeat the same information.
 
 
-# 29. AI-Assisted Development
-
+## 29. AI-Assisted Development
 AI-assisted development may be documented transparently as part of the project.
 
 AI can support activities such as:
@@ -1276,8 +1217,7 @@ Final decisions, code behavior and test results must be manually understood, rev
 The responsibility for the final implementation remains with the developer.
 
 
-# 30. Completion Strategy
-
+## 30. Completion Strategy
 The test plan is intentionally broader than the implementation commitment.
 
 The goal of the assessment is not to complete every scenario listed in this document.

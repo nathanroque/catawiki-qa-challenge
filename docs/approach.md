@@ -69,7 +69,7 @@ These behaviors were treated as environmental concerns rather than being hidden 
 
 The headless behavior remains an item to investigate before introducing CI execution.
 
-## 6. What now?
+## 6. Expanding Beyond the Core Scenario
 
 The initial implementation covers the core scenario requested in the assignment. However, the assignment explicitly encourages going beyond the minimum implementation:
 
@@ -136,7 +136,7 @@ With these constraints established, the remaining scenarios can be selected usin
 
 The expanded test plan will be risk-based and focus on scenarios that provide additional confidence or demonstrate a distinct testing technique without duplicating coverage unnecessarily.
 
-## 9.API reconnaissance and first API test
+## 9. API reconnaissance and first API test
 
 Initial manual exploration did not reveal an obvious JSON search endpoint, so API testing was initially deferred.
 
@@ -203,3 +203,33 @@ The final scenario verifies that:
 - the result summary identifies the displayed items as related objects.
 
 The exact related-object count is intentionally not asserted because it is dynamic production data.
+
+## 13. Accessibility Baseline Strategy
+
+Automated accessibility coverage was introduced using `@axe-core/playwright`.
+
+The first landing-page scan was initially configured to fail on any `serious` or `critical` violation.
+
+Exploratory execution revealed multiple existing high-severity accessibility findings in the production application.
+
+Rather than suppressing the findings or allowing the accessibility test to remain permanently failing, the scenario was changed to use a known-issue baseline.
+
+The landing page was scanned repeatedly before defining the baseline.
+
+Across three consecutive executions, the same nine high-severity violation rule IDs were consistently detected, while the number of affected DOM nodes varied for some rules due to dynamic production content.
+
+For example, the `color-contrast` rule remained present in every execution while the number of affected nodes changed.
+
+For this reason, the baseline is defined by axe violation ID rather than exact node count.
+
+The test:
+
+- reports all current high-severity findings;
+- accepts explicitly documented known violation IDs;
+- fails if a new `serious` or `critical` violation rule appears.
+
+This keeps accessibility automation useful as a regression signal while acknowledging existing production accessibility debt that is outside the scope of this challenge.
+
+Known violations are kept separately from the test implementation so that the baseline remains explicit and reviewable.
+
+The baseline does not classify these findings as acceptable product behavior. It only distinguishes pre-existing production findings from newly detected accessibility regressions within the scope of this external assessment.
