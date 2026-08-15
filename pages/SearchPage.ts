@@ -5,6 +5,22 @@ export class SearchPage {
 
   async goto() {
     await this.page.goto('/');
+
+    const continueWithoutAccepting = this.page.getByText(
+      'Continue without accepting',
+      { exact: true }
+    );
+
+    await continueWithoutAccepting
+      .waitFor({
+        state: 'visible',
+        timeout: 3000,
+      })
+      .catch(() => {});
+
+    if (await continueWithoutAccepting.isVisible()) {
+      await continueWithoutAccepting.click();
+    }
   }
 
   async searchFor(term: string) {

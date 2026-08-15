@@ -135,3 +135,31 @@ With these constraints established, the remaining scenarios can be selected usin
 ## 8. Test Plan
 
 The expanded test plan will be risk-based and focus on scenarios that provide additional confidence or demonstrate a distinct testing technique without duplicating coverage unnecessarily.
+
+## 9.API reconnaissance and first API test
+
+Initial manual exploration did not reveal an obvious JSON search endpoint, so API testing was initially deferred.
+
+A later focused network investigation using Playwright browser tooling identified several read-only JSON endpoints naturally consumed by the unauthenticated application.
+
+The `/buyer/api/v3/lots/{id}/navigation` endpoint was selected as the first API test because its contract is small and its useful assertions are based on stable relationships rather than volatile auction values.
+
+The test dynamically discovers a current lot, requests its navigation state, follows the returned `next_lot_id`, and validates cross-response invariants such as:
+
+- the next position increments by one;
+- the next lot points back to the original lot;
+- both responses report the same total number of lots.
+
+This allowed API coverage to be added without hard-coding production lot IDs.
+
+## 10. Search-to-API consistency
+
+The initial design attempted to retrieve the server-rendered search document directly through Playwright's `APIRequestContext`.
+
+The production edge layer returned `403 Access Denied` for that request.
+
+Rather than attempting to bypass the production security behavior, the test was redesigned as a UI/API integration scenario.
+
+The browser performs the normal `"Train"` search and identifies the second lot exactly as a customer would. The lot identifier discovered through the UI is then used to request the corresponding read-only bidding state API.
+
+This validates that the lot presented through the required UI journey is also represented consistently by the backend service, while respecting the production environment constraints.

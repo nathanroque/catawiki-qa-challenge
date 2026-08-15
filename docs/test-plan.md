@@ -142,8 +142,8 @@ Potentially valuable under different environmental or organizational conditions,
 |---|---|---|---|---|---|
 | E2E-001 | Search `Train` → open second lot → validate lot details and identity | E2E / Smoke | P0 | PR | Implemented |
 | E2E-002 | Nonsense search → appropriate empty state | E2E / Negative | P1 | PR | Planned |
-| API-001 | Bidding state exposes a valid contract and business invariants | API / Contract | P1 | PR | Planned |
-| API-002 | Lot navigation preserves adjacency and auction-position invariants | API / Integration | P1 | PR | Planned |
+| API-001 | Second Train search lot has consistent bidding API state | UI/API Integration | P1 | PR | Implemented |
+| API-002 | Lot navigation remains internally consistent | API / Integration | P1 | PR | Implemented |
 | A11Y-001 | Landing page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
 | A11Y-002 | Search results have no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
 | A11Y-003 | Lot page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
@@ -622,13 +622,16 @@ Extracting `__NEXT_DATA__` may be useful for higher-level integration analysis, 
 **Status:** Planned
 
 ```gherkin
-Scenario: Active lot bidding state exposes a valid public contract
+Scenario: Second Train search lot has consistent bidding API state
 
-  Given I have a valid active lot identifier
-  When I request the lot bidding state
-  Then the API response should be successful
-  And the requested lot should be represented
-  And the bidding data should satisfy its structural and business invariants
+  Given I am on the Catawiki landing page
+  When I search for "Train"
+  And I identify the second lot from the search results
+  And I request the bidding state for that lot
+  Then the bidding response should contain the selected lot
+  And the lot should have a valid auction identifier
+  And its favourite count should be a non-negative integer
+  And its bidding period should be structurally valid
 ```
 
 #### Test intent
@@ -644,15 +647,17 @@ A complementary negative assertion may verify that omitting the required `ids` p
 **Layer:** API / Integration  
 **Priority:** P1  
 **CI target:** Pull Request  
-**Status:** Planned
+**Status:** Implemented
 
 ```gherkin
 Scenario: Auction navigation remains internally consistent
 
   Given I have a valid lot with an adjacent lot
   When I request its navigation information
-  And I request the navigation information for the next lot
-  Then the next lot position should follow the original position
+  Then its current position should be within the navigation range
+
+  When I request the navigation information for the next lot
+  Then the next lot position should immediately follow the original position
   And the next lot should reference the original lot as its previous lot
   And both lots should belong to the same navigation sequence
 ```
