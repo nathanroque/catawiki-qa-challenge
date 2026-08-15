@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { SearchPage } from '../../pages/SearchPage';
 import { SearchResultsPage } from '../../pages/SearchResultsPage';
+import { CatawikiApiClient } from '../../api/CatawikiApiClient';
+import { validateBiddingStateSchema } from '../../api/schemas/biddingState.schema';
 
 test('second Train search lot has consistent bidding API state @api @integration', async ({
   page,
@@ -8,6 +10,7 @@ test('second Train search lot has consistent bidding API state @api @integration
 }) => {
   const searchPage = new SearchPage(page);
   const searchResultsPage = new SearchResultsPage(page);
+  const api = new CatawikiApiClient(request);
 
   await searchPage.goto();
   await searchPage.searchFor('Train');
@@ -15,28 +18,16 @@ test('second Train search lot has consistent bidding API state @api @integration
   expect(await searchResultsPage.lots.count())
     .toBeGreaterThan(1);
 
-  const href = await searchResultsPage.getLotHref(1);
+  const lotId = await searchResultsPage.getLotId(1);
 
-  expect(href).toBeTruthy();
-
-  const lotIdMatch = href!.match(/\/l\/(\d+)/);
-
-  expect(lotIdMatch).toBeTruthy();
-
-  const lotId = Number(lotIdMatch![1]);
-
-  const biddingResponse = await request.get(
-    `/buyer/api/v3/bidding/lots?ids=${lotId}`,
-    {
-      headers: {
-        Accept: 'application/json',
-      },
-    }
-  );
+  const biddingResponse =
+    await api.getBiddingState(lotId);
 
   expect(biddingResponse.ok()).toBeTruthy();
 
   const body = await biddingResponse.json();
+
+  validateBiddingStateSchema(body);
 
   expect(Array.isArray(body.lots)).toBeTruthy();
 

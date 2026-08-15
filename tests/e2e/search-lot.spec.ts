@@ -18,12 +18,9 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
     
     const selectedTitle = await searchResultsPage.getLotTitle(1);
 
-    const href = await searchResultsPage.getLotHref(1);
-
     expect(selectedTitle).toBeTruthy();
-    expect(href).toBeTruthy();
 
-    const lotId = href?.match(/\/l\/(\d+)/)?.[1];
+    const lotId = await searchResultsPage.getLotId(1);
 
     expect(lotId).toBeTruthy();
 

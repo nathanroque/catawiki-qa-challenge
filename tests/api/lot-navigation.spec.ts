@@ -1,16 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { CatawikiApiClient } from '../../api/CatawikiApiClient';
+import { validateLotNavigationSchema } from '../../api/schemas/lotNavigation.schema';
 
-test('auction navigation remains internally consistent @api ', async ({
+test('auction navigation remains internally consistent @api', async ({
   request,
 }) => {
-  const headers = {
-    Accept: 'application/json',
-  };
+  const api = new CatawikiApiClient(request);
 
-  const feedResponse = await request.get(
-    '/buyer/api/v2/feeds/feeds_default/lots?per_page=9&page=1&locale=en',
-    { headers }
-  );
+  const feedResponse = await api.getFeedLots();
 
   expect(feedResponse.ok()).toBeTruthy();
 
@@ -22,16 +19,15 @@ test('auction navigation remains internally consistent @api ', async ({
   let originalNavigation;
 
   for (const lot of feedBody.lots) {
-    const navigationResponse = await request.get(
-      `/buyer/api/v3/lots/${lot.id}/navigation`,
-      { headers }
-    );
+    const navigationResponse = await api.getLotNavigation(lot.id);
 
     if (!navigationResponse.ok()) {
       continue;
     }
 
     const navigation = await navigationResponse.json();
+
+    validateLotNavigationSchema(navigation);
 
     if (navigation.next_lot_id !== null) {
       originalLotId = lot.id;
@@ -54,14 +50,14 @@ test('auction navigation remains internally consistent @api ', async ({
 
   const nextLotId = originalNavigation.next_lot_id;
 
-  const nextNavigationResponse = await request.get(
-    `/buyer/api/v3/lots/${nextLotId}/navigation`,
-    { headers }
-  );
+  const nextNavigationResponse =
+    await api.getLotNavigation(nextLotId);
 
   expect(nextNavigationResponse.ok()).toBeTruthy();
 
   const nextNavigation = await nextNavigationResponse.json();
+
+  validateLotNavigationSchema(nextNavigation);
 
   expect(nextNavigation.current_position)
     .toBe(originalNavigation.current_position + 1);

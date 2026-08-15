@@ -30,4 +30,24 @@ export class SearchResultsPage {
       .getByRole('link')
       .click();
   }
+
+  async getLotId(index: number) {
+  const href = await this.getLotHref(index);
+
+  if (!href) {
+    throw new Error(
+      `Lot at index ${index} does not contain a link`
+    );
+  }
+
+  const match = href.match(/\/l\/(\d+)/);
+
+  if (!match) {
+    throw new Error(
+      `Could not extract lot ID from URL: ${href}`
+    );
+  }
+
+  return Number(match[1]);
+}
 }

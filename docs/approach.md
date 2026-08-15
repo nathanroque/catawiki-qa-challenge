@@ -163,3 +163,23 @@ Rather than attempting to bypass the production security behavior, the test was 
 The browser performs the normal `"Train"` search and identifies the second lot exactly as a customer would. The lot identifier discovered through the UI is then used to request the corresponding read-only bidding state API.
 
 This validates that the lot presented through the required UI journey is also represented consistently by the backend service, while respecting the production environment constraints.
+
+## 11. API Client and Contract Validation
+
+After the first API and UI/API integration scenarios were working, repeated HTTP configuration started to appear across the tests.
+
+A small `CatawikiApiClient` was introduced to centralize API-specific knowledge such as endpoints and common request headers, while keeping assertions and expected behavior inside the tests.
+
+The same principle used for the Page Objects was applied here:
+
+- Page Objects know how to interact with the UI.
+- The API client knows how to communicate with the HTTP endpoints.
+- Tests remain responsible for expected behavior.
+
+Runtime schema validation was also added for the navigation and bidding-state responses.
+
+Schema validation is intentionally kept separate from business assertions.
+
+For example, validating that `current_position` is an integer is a contract check, while validating that the next lot position equals the current position plus one is a business invariant.
+
+Only fields relevant to the implemented scenarios are validated to avoid unnecessarily coupling the suite to the complete API implementation.

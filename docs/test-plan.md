@@ -142,8 +142,8 @@ Potentially valuable under different environmental or organizational conditions,
 |---|---|---|---|---|---|
 | E2E-001 | Search `Train` → open second lot → validate lot details and identity | E2E / Smoke | P0 | PR | Implemented |
 | E2E-002 | Nonsense search → appropriate empty state | E2E / Negative | P1 | PR | Planned |
-| API-001 | Second Train search lot has consistent bidding API state | UI/API Integration | P1 | PR | Implemented |
-| API-002 | Lot navigation remains internally consistent | API / Integration | P1 | PR | Implemented |
+| API-001 | Second Train search lot has consistent bidding API state | UI/API Integration + Contract | P1 | PR | Implemented |
+| API-002 | Lot navigation remains internally consistent | API + Contract | P1 | PR | Implemented |
 | A11Y-001 | Landing page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
 | A11Y-002 | Search results have no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
 | A11Y-003 | Lot page has no serious/critical accessibility violations | Accessibility | P1 | PR | Planned |
@@ -612,14 +612,18 @@ The main search flow should not be represented as a pure API test because its pr
 
 Extracting `__NEXT_DATA__` may be useful for higher-level integration analysis, but it is not currently prioritized over the clearer JSON contracts above.
 
-## Planned API Coverage
+## Implemented API Coverage
+
+Both implemented API-related scenarios include runtime validation of the response structures used by the tests.
+
+Contract validation is intentionally limited to fields relevant to the implemented scenarios, while behavioral and cross-response assertions remain in the tests.
 
 ### API-001 — Bidding State Contract
 
 **Layer:** API / Contract  
 **Priority:** P1  
 **CI target:** Pull Request  
-**Status:** Planned
+**Status:** Implemented
 
 ```gherkin
 Scenario: Second Train search lot has consistent bidding API state
