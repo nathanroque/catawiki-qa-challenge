@@ -1,15 +1,26 @@
 import { Page } from '@playwright/test';
 
+/**
+ * Encapsulates read-only information exposed on a Catawiki lot details page.
+ */
 export class LotPage {
   constructor(private readonly page: Page) {}
 
+  /**
+   * Locator for the primary lot title heading.
+   */
   get title() {
     return this.page.getByRole('heading', {
       level: 1,
     });
   }
 
-  async getFavouriteCount() {
+  /**
+   * Retrieves the currently displayed favourite count.
+   *
+   * @returns Favourite count parsed as a number.
+   */
+  async getFavouriteCount(): Promise<number> {
     const favouriteButton = this.page
       .getByTitle('favourite')
       .first();
@@ -20,7 +31,12 @@ export class LotPage {
     return Number(favouriteText?.trim());
   }
 
-  async getCurrentBid() {
+  /**
+   * Retrieves the currently displayed bid amount.
+   *
+   * @returns Formatted euro amount, or undefined when no bid value is found.
+   */
+  async getCurrentBid(): Promise<string | undefined> {
     const bidSection = this.page.getByTestId(
       'lot-bid-status-section'
     );

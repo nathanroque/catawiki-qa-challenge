@@ -120,7 +120,7 @@ Only endpoints naturally exposed through normal customer interactions should be 
 
 **Protect the customer experience**
 
-The automation should behave as a normal visitor and avoid actions that could affect real auctions or users. In particular, no bids, purchases, favourites, account creation, or other state-changing actions should be performed unless explicitly required or reversable.
+The automation should behave as a normal visitor and avoid actions that could affect real auctions or users. In particular, no bids, purchases, favourites, account creation, or other state-changing actions should be performed unless explicitly required or reversible.
 
 **Avoid sensitive data**
 
@@ -233,3 +233,32 @@ This keeps accessibility automation useful as a regression signal while acknowle
 Known violations are kept separately from the test implementation so that the baseline remains explicit and reviewable.
 
 The baseline does not classify these findings as acceptable product behavior. It only distinguishes pre-existing production findings from newly detected accessibility regressions within the scope of this external assessment.
+
+## 14. Reporting Readability and Public API Documentation
+
+As the suite expanded across E2E, API, integration and accessibility layers, the generated Playwright report began exposing many low-level implementation actions that were useful for debugging but less useful for a reviewer trying to understand the scenario.
+
+Meaningful `test.step()` blocks were therefore introduced around behavioral and validation phases of the existing tests.
+
+The goal is not to wrap every Playwright command in a named step. Steps should describe intent at the scenario level, such as:
+
+- opening the application;
+- performing the search;
+- capturing runtime identity;
+- validating cross-page consistency;
+- requesting API state;
+- validating a response contract;
+- comparing accessibility findings with the known baseline.
+
+This keeps the HTML report readable for technical and non-technical reviewers while preserving Playwright's lower-level diagnostic information when a step is expanded.
+
+Public Page Object and API client methods were also documented with JSDoc where the method contract, indexing convention, return value or responsibility benefits from clarification.
+
+The documentation is intentionally kept close to the implementation so that IDE tooling can surface it during development without creating a separate reference document that could drift away from the code.
+
+The underlying design boundary remains unchanged:
+
+- Page Objects describe how to interact with UI areas.
+- The API client describes how to call selected read-only HTTP endpoints.
+- Tests describe expected behavior and assertions.
+- Named test steps describe the scenario narrative shown in reports.

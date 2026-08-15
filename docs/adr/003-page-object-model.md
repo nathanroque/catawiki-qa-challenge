@@ -43,3 +43,19 @@ Page Objects introduce additional files and abstraction.
 Overly large or generic Page Objects can hide test intent and become difficult to maintain, so they should remain small and focused on page-specific responsibilities.
 
 Assertions should generally remain in the tests unless they represent page readiness or another page-specific invariant.
+
+## Extension to API Interactions
+
+The same separation principle was later applied to repeated HTTP interactions.
+
+A small `CatawikiApiClient` was introduced to encapsulate API-specific knowledge such as endpoint paths and common request headers.
+
+This is not intended to turn the Page Object Model into a generic abstraction layer. The two abstractions serve different boundaries:
+
+- Page Objects encapsulate page-specific UI interactions and selectors.
+- `CatawikiApiClient` encapsulates request construction for selected read-only endpoints.
+- Tests remain responsible for contract expectations, business invariants and cross-layer assertions.
+
+The client was introduced only after repeated API request configuration appeared in implemented tests, following the same preference for evidence-based abstraction used when introducing the Page Objects.
+
+Keeping assertions outside the client prevents HTTP helpers from hiding the behavior that each test is intended to validate.

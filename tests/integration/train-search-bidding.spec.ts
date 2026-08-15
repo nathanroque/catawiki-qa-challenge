@@ -12,54 +12,63 @@ test('second Train search lot has consistent bidding API state @api @integration
   const searchResultsPage = new SearchResultsPage(page);
   const api = new CatawikiApiClient(request);
 
-  await searchPage.goto();
-  await searchPage.searchFor('Train');
+  const lotId = await test.step(
+    'Search for "Train" and capture the second lot ID',
+    async () => {
+      await searchPage.goto();
+      await searchPage.searchFor('Train');
 
-  expect(await searchResultsPage.lots.count())
-    .toBeGreaterThan(1);
+      expect(await searchResultsPage.lots.count())
+        .toBeGreaterThan(1);
 
-  const lotId = await searchResultsPage.getLotId(1);
-
-  const biddingResponse =
-    await api.getBiddingState(lotId);
-
-  expect(biddingResponse.ok()).toBeTruthy();
-
-  const body = await biddingResponse.json();
-
-  validateBiddingStateSchema(body);
-
-  expect(Array.isArray(body.lots)).toBeTruthy();
-
-  const biddingLot = body.lots.find(
-    (lot: { id: number }) => lot.id === lotId
+      return searchResultsPage.getLotId(1);
+    }
   );
 
-  expect(biddingLot).toBeTruthy();
+  const body = await test.step(
+    'Request bidding state for the selected lot',
+    async () => {
+      const biddingResponse =
+        await api.getBiddingState(lotId);
 
-  expect(biddingLot.id).toBe(lotId);
+      expect(biddingResponse.ok()).toBeTruthy();
 
-  expect(Number.isInteger(biddingLot.favorite_count))
-    .toBeTruthy();
+      return biddingResponse.json();
+    }
+  );
 
-  expect(biddingLot.favorite_count)
-    .toBeGreaterThanOrEqual(0);
+  await test.step('Validate bidding response contract', async () => {
+    validateBiddingStateSchema(body);
+  });
 
-  const biddingStart =
-    Date.parse(biddingLot.bidding_start_time);
+  await test.step('Validate UI and API lot consistency', async () => {
+    const biddingLot = body.lots.find(
+      (lot: { id: number }) => lot.id === lotId
+    );
 
-  const biddingEnd =
-    Date.parse(biddingLot.bidding_end_time);
+    expect(biddingLot).toBeTruthy();
+    expect(biddingLot.id).toBe(lotId);
+    expect(Number.isInteger(biddingLot.favorite_count))
+      .toBeTruthy();
+    expect(biddingLot.favorite_count)
+      .toBeGreaterThanOrEqual(0);
 
-  expect(biddingStart).not.toBeNaN();
-  expect(biddingEnd).not.toBeNaN();
-  expect(biddingStart).toBeLessThan(biddingEnd);
+    const biddingStart =
+      Date.parse(biddingLot.bidding_start_time);
 
-  console.table({
-    searchTerm: 'Train',
-    selectedPosition: 2,
-    lotId,
-    favouriteCount: biddingLot.favorite_count,
-    auctionId: biddingLot.auction_id,
+    const biddingEnd =
+      Date.parse(biddingLot.bidding_end_time);
+
+    expect(biddingStart).not.toBeNaN();
+    expect(biddingEnd).not.toBeNaN();
+    expect(biddingStart).toBeLessThan(biddingEnd);
+
+    console.table({
+      searchTerm: 'Train',
+      selectedPosition: 2,
+      lotId,
+      favouriteCount: biddingLot.favorite_count,
+      auctionId: biddingLot.auction_id,
+    });
   });
 });

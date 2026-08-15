@@ -1,29 +1,27 @@
 import { Page } from '@playwright/test';
+import { dismissCookieConsentIfPresent } from '../support/cookie-consent';
 
+/**
+ * Encapsulates interactions available from the Catawiki landing page.
+ */
 export class SearchPage {
   constructor(private readonly page: Page) {}
 
-  async goto() {
+  /**
+   * Opens the English Catawiki landing page and prepares it for interaction.
+   */
+  async goto(): Promise<void> {
     await this.page.goto('/');
 
-    const continueWithoutAccepting = this.page.getByText(
-      'Continue without accepting',
-      { exact: true }
-    );
-
-    await continueWithoutAccepting
-      .waitFor({
-        state: 'visible',
-        timeout: 3000,
-      })
-      .catch(() => {});
-
-    if (await continueWithoutAccepting.isVisible()) {
-      await continueWithoutAccepting.click();
-    }
+    await dismissCookieConsentIfPresent(this.page);
   }
 
-  async searchFor(term: string) {
+  /**
+   * Searches for the provided term using the search controls in the page header.
+   *
+   * @param term Search query to submit.
+   */
+  async searchFor(term: string): Promise<void> {
     const header = this.page.getByRole('banner');
 
     const searchInput = header.getByRole('combobox', {
