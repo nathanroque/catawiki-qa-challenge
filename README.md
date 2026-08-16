@@ -12,15 +12,15 @@ The implemented coverage currently includes:
 - Validation that the selected search result matches the opened lot
 - Retrieval and validation of lot title, favourite count and current bid
 - Negative search coverage for searches with no exact matches
-- UI/API integration validation for the second `Train` search result
+- UI/API integration validation for the second `Train` search result, including lot identity, favourite count and current bid
 - Direct API validation of lot navigation consistency
-- Runtime contract validation for selected API responses
+- Runtime schema validation for selected API responses, backed by deterministic unit tests
 - Automated accessibility regression checks for:
   - Landing page
   - Search results
   - Lot details
 - Cross-browser smoke validation across Chromium, Firefox and WebKit
-- TypeScript validation through GitHub Actions
+- Deterministic GitHub Actions quality gates for type checking, linting, formatting, schema unit tests and Playwright test discovery
 - Internationalization validation for language selection and locale persistence across the critical journey
 
 Additional scenarios are prioritized according to risk, confidence gained, execution cost, maintainability and production safety.
@@ -40,38 +40,68 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 
 ```text
 .
+├── .agents/
+│   └── skills/
+│       └── catawiki-qa/
+│           └── SKILL.md
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
 ├── api/
 │   ├── CatawikiApiClient.ts
 │   └── schemas/
 │       ├── biddingState.schema.ts
 │       └── lotNavigation.schema.ts
 │
-├── pages/
-│   ├── SearchPage.ts
-│   ├── SearchResultsPage.ts
-│   └── LotPage.ts
-│
-├── tests/
-│   ├── accessibility/
-│   ├── api/
-│   ├── e2e/
-│   ├── integration/
-│   └── i18n/
-│
 ├── docs/
 │   ├── adr/
+│   │   ├── 001-playwright.md
+│   │   ├── 002-test-layering.md
+│   │   ├── 003-page-object-model.md
+│   │   ├── 004-production-test-guardrails.md
+│   │   ├── 005-risk-based-test-planning.md
+│   │   ├── 006-accessibility-baseline.md
+│   │   └── 007-cross-browser-execution-strategy.md
 │   ├── approach.md
 │   ├── findings.md
 │   ├── future-opportunities.md
 │   └── test-plan.md
 │
-├── .github/
-│   └── workflows/
-│       └── ci.yml
+├── pages/
+│   ├── LotPage.ts
+│   ├── SearchPage.ts
+│   └── SearchResultsPage.ts
 │
+├── suport/
+│   └── cookie-consent.ts
+│
+├── tests/
+│   ├── accessibility/
+│   │   ├── accessibility.spec.ts
+│   │   └── known-violations.ts
+│   ├── api/
+│   │   └── lotNavigation.schema.ts
+│   ├── e2e/
+│   │   └── search-lot.spec.ts
+│   ├── i18n/
+│   │   └── language-persistence.spec.ts
+│   ├── integration/
+│   │   └── train-search-bidding.spec.ts
+│   └── unit/
+│       ├── biddingState.schema.spec.ts
+│       └── lotNavigation.schema.spec.ts
+│
+├── .gitignore
+├── .prettierignore
+├── .prettierrc
+├── eslint.config.mjs
+├── package-lock.json
+├── package.json
 ├── playwright.config.ts
 ├── playwright.cross-browser.config.ts
-├── package.json
+├── README.md
 └── tsconfig.json
 ```
 
@@ -82,6 +112,7 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 - `tests/e2e/` contains user-facing end-to-end behavior.
 - `tests/api/` contains direct read-only API scenarios.
 - `tests/integration/` contains scenarios that correlate UI behavior with backend API state.
+- `tests/unit/` contains deterministic unit coverage for runtime schema validators.
 - `tests/accessibility/` contains automated accessibility regression checks.
 - `docs/` contains the test strategy, investigation findings and architectural decisions.
 - `playwright.config.ts` defines the default Chromium execution.
@@ -107,10 +138,33 @@ Install Playwright browsers:
 npx playwright install
 ```
 
-## Type Checking
+## Quality Checks
+
+Run the deterministic local quality gate:
+
+```bash
+npm run quality
+```
+
+This executes:
+
+```text
+TypeScript type check
+        ↓
+ESLint
+        ↓
+Prettier format check
+        ↓
+Schema validator unit tests
+```
+
+Individual checks can also be run with:
 
 ```bash
 npm run typecheck
+npm run lint
+npm run format:check
+npm run test:unit
 ```
 
 ## Running Tests
@@ -139,9 +193,9 @@ The cross-browser configuration reuses the critical `@smoke` journey across:
 - Firefox
 - WebKit
 
-Cross-browser execution uses a dedicated Playwright configuration and a single worker.
+Cross-browser execution uses a dedicated Playwright configuration, a single worker and a scoped 45-second test timeout.
 
-During exploratory execution, each browser completed the critical journey successfully when executed independently. Concurrent multi-browser execution produced intermittent timing failures, while serialized execution completed successfully.
+During exploratory execution, each browser completed the critical journey successfully when executed independently. Concurrent multi-browser execution produced intermittent timing failures, while serialized execution completed successfully. A later Firefox timeout near the end of the live journey showed that the default 30-second budget could still be marginal; a scoped 45-second cross-browser timeout subsequently passed repeated isolated Firefox and complete cross-browser runs.
 
 The single-worker constraint is therefore scoped specifically to cross-browser validation rather than reducing parallelism across the default suite.
 
@@ -290,9 +344,9 @@ Network reconnaissance identified several read-only JSON endpoints naturally con
 
 A small `CatawikiApiClient` centralizes endpoint and request configuration while keeping behavioral expectations inside the tests.
 
-Runtime schema validation is used to verify the relevant API response structures.
+Runtime schema validation is used to verify the relevant API response structures. The validators are also exercised by deterministic unit tests covering valid and invalid payloads without requiring production access.
 
-Contract checks are intentionally separated from business assertions.
+Schema checks are intentionally separated from business and integration assertions.
 
 For example:
 
@@ -300,6 +354,8 @@ For example:
 - `next.current_position === current.current_position + 1` is a behavioral invariant.
 
 Only fields relevant to the implemented scenarios are validated to avoid unnecessary coupling to the complete backend implementation.
+
+The UI/API integration scenario now compares meaningful shared runtime state for the selected lot: lot identity, favourite count and the displayed EUR current bid.
 
 ## Accessibility Testing
 
@@ -370,11 +426,11 @@ Reliability problems discovered during repeated execution are addressed as close
 
 Examples include:
 
-- Accessibility scans are serialized within their own scope and use a dedicated timeout because full-page axe analysis demonstrated higher execution cost.
-- Cookie consent is handled through the visible user-facing control rather than forced clicks or hard-coded internal consent state.
-- Late Usercentrics initialization is handled again before interactions that may be blocked by the overlay.
+- Accessibility scenarios remain independent, wait for meaningful page readiness before scanning and use a dedicated 60-second timeout for full-page axe analysis.
+- Cookie consent handling waits for the actual Usercentrics blocking overlay, dismisses it through the observed public action and verifies that the overlay is gone.
+- The consent helper accounts for Usercentrics initializing several seconds after navigation without using fixed sleeps, forced clicks or hard-coded internal consent state.
 - Mandatory API failures include HTTP status and response information for easier diagnosis.
-- Cross-browser smoke execution uses a single worker after concurrent browser execution demonstrated intermittent timing instability.
+- Cross-browser smoke execution uses a single worker after concurrent browser execution demonstrated intermittent timing instability, with a scoped 45-second timeout for the longer live journey.
 
 Local execution uses no automatic retries.
 
@@ -387,7 +443,15 @@ GitHub Actions currently performs deterministic repository validation:
 ```text
 Dependency installation
         ↓
-TypeScript type check
+Quality gate
+├── TypeScript type check
+├── ESLint
+├── Prettier format check
+└── Schema validator unit tests
+        ↓
+Playwright test discovery
+├── Default suite
+└── Cross-browser smoke configuration
 ```
 
 An initial GitHub-hosted workflow also attempted to execute read-only production API coverage.
@@ -418,7 +482,7 @@ The suite does not attempt to bypass this behavior.
 
 Production requests from the current GitHub-hosted environment may receive `403 Forbidden / Access Denied`.
 
-For this reason, the current hosted workflow performs deterministic static validation rather than production-facing test execution.
+For this reason, the current hosted workflow performs deterministic repository validation and Playwright test discovery rather than production-facing test execution.
 
 ### Cross-browser concurrency
 

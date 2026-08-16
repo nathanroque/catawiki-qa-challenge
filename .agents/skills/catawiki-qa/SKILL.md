@@ -1030,7 +1030,7 @@ Repeated concurrent multi-browser execution demonstrated timing instability agai
 The cross-browser configuration therefore uses:
 
 ```ts
-workers: 1
+workers: 1;
 ```
 
 This is an intentional reliability constraint.

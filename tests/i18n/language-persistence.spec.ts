@@ -6,7 +6,9 @@ test.describe.configure({
   timeout: 45_000,
 });
 
-test('selected language persists through the critical journey @i18n @e2e', async ({ page }) => {
+test('selected language persists through the critical journey @i18n @e2e', async ({
+  page,
+}) => {
   const searchPage = new SearchPage(page);
   const searchResultsPage = new SearchResultsPage(page);
 
@@ -24,7 +26,7 @@ test('selected language persists through the critical journey @i18n @e2e', async
     await expect(
       page.getByRole('combobox', {
         name: /Zoeken naar merk, model/i,
-      })
+      }),
     ).toBeVisible();
   });
 
@@ -33,9 +35,7 @@ test('selected language persists through the critical journey @i18n @e2e', async
 
     await expect(page).toHaveURL(/\/nl\/s\?/);
 
-    await expect(
-      searchResultsPage.getLot(1)
-    ).toBeVisible();
+    await expect(searchResultsPage.getLot(1)).toBeVisible();
   });
 
   await test.step('Open the second lot and preserve the Dutch locale', async () => {
@@ -47,7 +47,7 @@ test('selected language persists through the critical journey @i18n @e2e', async
       page.getByRole('button', {
         name: 'nl',
         exact: true,
-      })
+      }),
     ).toBeVisible();
   });
 });

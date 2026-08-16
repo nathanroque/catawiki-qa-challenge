@@ -5,10 +5,7 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "esModuleInterop": true,
-    "types": [
-      "node",
-      "@playwright/test"
-    ],
+    "types": ["node", "@playwright/test"],
     "skipLibCheck": true,
     "noEmit": true
   },
@@ -20,9 +17,5 @@
     "playwright.config.ts",
     "playwright.cross-browser.config.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "playwright-report",
-    "test-results"
-  ]
+  "exclude": ["node_modules", "playwright-report", "test-results"]
 }

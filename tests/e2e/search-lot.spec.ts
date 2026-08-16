@@ -3,7 +3,9 @@ import { SearchPage } from '../../pages/SearchPage';
 import { SearchResultsPage } from '../../pages/SearchResultsPage';
 import { LotPage } from '../../pages/LotPage';
 
-test('user can search for Train and inspect the second lot @smoke @e2e', async ({ page }) => {
+test('user can search for Train and inspect the second lot @smoke @e2e', async ({
+  page,
+}) => {
   const searchPage = new SearchPage(page);
   const searchResultsPage = new SearchResultsPage(page);
   const lotPage = new LotPage(page);
@@ -15,16 +17,20 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
   await test.step('Search for "Train"', async () => {
     await searchPage.searchFor('Train');
 
-    await expect(page).toHaveURL(/\/en\/s\?.*q=Train/);
+    await expect(page).toHaveURL(/\/en\/s\?q=Train/);
 
-    await expect(
-      searchResultsPage.lots.first()
-    ).toBeVisible();
+    const resultCount = await searchResultsPage.lots.count();
+
+    expect(
+      resultCount,
+      'Expected at least two search results for "Train"',
+    ).toBeGreaterThanOrEqual(2);
+
+    await expect(searchResultsPage.getLot(1)).toBeVisible();
   });
 
-  const { selectedTitle, lotId } = await test.step(
-    'Capture second lot identity',
-    async () => {
+  const { selectedTitle, lotId } =
+    await test.step('Capture second lot identity', async () => {
       const selectedTitle = await searchResultsPage.getLotTitle(1);
       expect(selectedTitle).toBeTruthy();
 
@@ -35,8 +41,7 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
         selectedTitle: selectedTitle!.trim(),
         lotId,
       };
-    }
-  );
+    });
 
   await test.step('Open selected lot', async () => {
     await searchResultsPage.openLot(1);
@@ -51,18 +56,26 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
     const favourites = await lotPage.getFavouriteCount();
     expect(favourites).toBeGreaterThanOrEqual(0);
 
-    const currentBid = await lotPage.getCurrentBid();
-    expect(currentBid).toBeTruthy();
+    const bidStatus = await lotPage.getBidStatus();
+
+    expect(
+      bidStatus.label,
+      `Expected the second lot to have a current bid, but it is currently in "${bidStatus.label}" state`,
+    ).toBe('Current bid');
+
+    expect(bidStatus.amount).toMatch(/^€\s*\d[\d.,\s]*$/);
 
     console.table({
       title: selectedTitle,
       favourites,
-      currentBid,
+      currentBid: bidStatus.amount,
     });
   });
 });
 
-test('user sees related objects when search has no exact results @e2e @negative', async ({ page }) => {
+test('user sees related objects when search has no exact results @e2e @negative', async ({
+  page,
+}) => {
   const searchPage = new SearchPage(page);
   const searchResultsPage = new SearchResultsPage(page);
 
@@ -71,26 +84,20 @@ test('user sees related objects when search has no exact results @e2e @negative'
   });
 
   await test.step('Search for a query with no exact matches', async () => {
-    await searchPage.searchFor(
-      'zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'
-    );
+    await searchPage.searchFor('zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz');
   });
 
   await test.step('Validate no-exact-results fallback message', async () => {
     await expect(
-      page.getByText(
-        'No exact results. Check out these related objects.'
-      )
+      page.getByText('No exact results. Check out these related objects.'),
     ).toBeVisible();
   });
 
   await test.step('Validate related objects are displayed', async () => {
-    await expect(
-      searchResultsPage.lots.first()
-    ).toBeVisible();
+    await expect(searchResultsPage.lots.first()).toBeVisible();
 
-    await expect(
-      page.getByTestId('object-amount')
-    ).toContainText('related objects');
+    await expect(page.getByTestId('object-amount')).toContainText(
+      'related objects',
+    );
   });
 });

@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   quality-checks:
-    name: Type Check
+    name: Quality Checks
     runs-on: ubuntu-latest
 
     steps:
@@ -29,10 +29,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Static Validation
-        run: npm run typecheck
+      - name: Run quality gate
+        run: npm run quality
 
-      - name: Validate Playwright configuration
+      - name: Validate Playwright test discovery
         run: |
           npm test -- --list
           npm run test:cross-browser -- --list

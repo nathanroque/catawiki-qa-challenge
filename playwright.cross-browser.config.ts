@@ -6,6 +6,8 @@ export default defineConfig({
 
   workers: 1,
 
+  timeout: 45_000,
+
   grep: /@smoke/,
 
   reporter: [

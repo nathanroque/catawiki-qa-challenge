@@ -1,6 +1,7 @@
 # Testing Approach
 
 ## 1. Initial exploration
+
 - Manually executed the required search-to-lot journey
 - Inspected DOM structure and accessibility semantics
 - Observed network traffic
@@ -13,6 +14,7 @@ I used Playwright Codegen to record the expected user journey and inspect the lo
 The recorded flow was not kept as part of the final suite. Instead, it was used as a discovery artifact to compare generated locators against the DOM, accessibility tree, and actual test requirements.
 
 Examples of refinements:
+
 - Replaced a title-based locator for the second lot with a collection-based locator using the second result.
 - Replaced a dynamic favourite count locator with a stable semantic locator.
 - Scoped the search input to the page header after discovering multiple matching inputs in the DOM.
@@ -162,7 +164,7 @@ Rather than attempting to bypass the production security behavior, the test was 
 
 The browser performs the normal `"Train"` search and identifies the second lot exactly as a customer would. The lot identifier discovered through the UI is then used to request the corresponding read-only bidding state API.
 
-This validates that the lot presented through the required UI journey is also represented consistently by the backend service, while respecting the production environment constraints.
+The scenario was later strengthened beyond identity continuity. After opening the selected lot, the test captures the displayed favourite count and current bid, then compares them with `favorite_count` and `current_bid_amount.EUR` for the same runtime lot returned by the bidding API. This makes the integration assertion about shared business state rather than only confirming that the same identifier exists in both layers.
 
 ## 11. API Client and Contract Validation
 
@@ -183,6 +185,8 @@ Schema validation is intentionally kept separate from business assertions.
 For example, validating that `current_position` is an integer is a contract check, while validating that the next lot position equals the current position plus one is a business invariant.
 
 Only fields relevant to the implemented scenarios are validated to avoid unnecessarily coupling the suite to the complete API implementation.
+
+Deterministic unit tests were later added around both runtime validators. They cover representative valid and invalid payloads, including null bidding state, malformed currency values, invalid favourite counts, invalid bidding ranges, and non-integer adjacent lot identifiers. This gives CI meaningful schema-validation coverage without requiring production access.
 
 ## 12. Negative Search Behavior
 
@@ -267,28 +271,23 @@ After the initial P0, API, integration, negative, and accessibility scenarios we
 
 This exposed several distinct failure modes that were intentionally addressed at their source rather than through broad timeout increases or unconditional retries.
 
-### Accessibility execution cost
+### Accessibility execution cost and readiness
 
-The three full-page axe scans were reliable when executed independently, but parallel full-suite execution occasionally caused accessibility scenarios to exceed Playwright's default test timeout.
+The three full-page axe scans have a higher execution cost than the functional scenarios and retain a dedicated 60-second timeout.
 
-Rather than reducing parallelism across the entire project, accessibility execution was isolated:
+The scenarios were initially serialized, but this introduced an undesirable failure dependency: one failed accessibility test could prevent later independent page contexts from running. Serial mode was removed, and each page now establishes meaningful readiness before Axe executes. Search results must be visible before the results scan, and the lot title must be visible after navigation before the lot-details scan.
 
-```ts
-test.describe.configure({
-  mode: 'serial',
-  timeout: 60_000,
-});
-```
-
-This keeps the higher execution cost scoped to accessibility analysis while allowing the remainder of the suite to retain normal parallel execution.
+Repeated execution with two workers completed successfully after these changes, preserving independent reporting without increasing the timeout globally.
 
 ### Late cookie-consent initialization
 
-Repeated execution also revealed that the Usercentrics consent component can finish initializing after the initial navigation-time consent handling has completed.
+Repeated execution revealed that Usercentrics can initialize several seconds after `DOMContentLoaded`, after the application and search field are already visible.
 
-In one failure, the search button was already visible and enabled, but the consent overlay intercepted pointer events until the test timed out.
+A focused browser investigation showed that the component is mounted under `aside#usercentrics-cmp-ui` with an open shadow root. The full-screen `#uc-overlay` is the element that actually intercepts pointer input, while the dismissal action is an `<a id="uc-close-icon">` without reliable button or link semantics. Its visible text can also be localized independently of the `/en` route.
 
-The existing consent utility is therefore also invoked immediately before search interaction when needed. Forcing the click through the overlay was intentionally rejected because it would bypass a real user-facing UI state rather than handle it correctly.
+The support helper was therefore changed to synchronize on the actual blocking overlay, use the scoped Usercentrics action, and verify that the overlay becomes hidden. The helper uses bounded waits based on observed initialization timing, with no `waitForTimeout()`, `force: true`, opaque storage preload, or general retry loop.
+
+Consent handling remains an environment concern performed after initial navigation rather than being spread across every Page Object action.
 
 ### API failure diagnostics
 
@@ -300,15 +299,27 @@ Automatic retries were intentionally not added because different HTTP failures s
 
 ### CI environment validation
 
-The first GitHub Actions workflow was intentionally limited to TypeScript validation and the pure read-only API scenario so that browser installation and UI execution were not introduced before the production environment behavior was understood.
+The first GitHub Actions workflow was intentionally limited so that the hosted execution environment could be validated before broader production-facing coverage was introduced.
 
-During the first pull-request execution, repository setup, dependency installation, and TypeScript validation completed successfully. The API scenario then received a `403 Forbidden / Access Denied` response from the production edge layer.
+During the first pull-request execution, repository setup, dependency installation, and TypeScript validation completed successfully. The read-only production API scenario then received a `403 Forbidden / Access Denied` response from the production edge layer.
 
 Rather than attempting to make the GitHub-hosted runner resemble a normal customer session or introducing retries around an access restriction, production-facing test execution was removed from the current hosted workflow.
 
-The resulting CI pipeline keeps deterministic static validation automated while acknowledging that production-facing scenarios require an execution environment accepted by the Catawiki production edge layer.
+The hosted pipeline was subsequently strengthened with deterministic repository checks that do not require production access:
 
-Before introducing the hosted CI workflow, repeated local execution after the reliability changes produced three consecutive successful full-suite runs.
+```text
+npm run quality
+├── TypeScript type check
+├── ESLint
+├── Prettier format check
+└── schema validator unit tests
+
+Playwright discovery
+├── default configuration
+└── cross-browser configuration
+```
+
+This provides enforceable CI feedback while acknowledging that production-facing scenarios require an execution environment accepted by the Catawiki production edge layer.
 
 ## 16. Cross-Browser Validation Strategy
 
@@ -320,7 +331,7 @@ Initial isolated execution confirmed that the journey could complete successfull
 
 The first combined configuration added Firefox and WebKit as additional Playwright projects while retaining the normal parallel execution model. During full-suite execution, the Firefox and WebKit smoke scenarios experienced intermittent timeouts in different stages of the journey.
 
-One failure occurred while waiting for lot navigation to complete. Another occurred when a late Usercentrics consent overlay intercepted the search interaction.
+One failure occurred while waiting for lot navigation to complete. Another occurred when a late Usercentrics consent overlay intercepted the search interaction. The consent interaction was later hardened independently after direct investigation of the Usercentrics lifecycle.
 
 Because all three browsers had already succeeded independently, the next experiment reduced cross-browser concurrency rather than increasing global timeouts or introducing retries.
 
@@ -343,6 +354,8 @@ playwright.cross-browser.config.ts
 This keeps normal development execution fast and predictable while providing deliberate cross-browser validation of the highest-value user journey.
 
 The single-worker constraint is scoped to cross-browser execution and does not reduce parallelism for the normal Chromium suite.
+
+After the consent helper was hardened, Firefox still exceeded the default 30-second test budget in the final lot-details step during repeated cross-browser validation. A 45-second timeout was therefore scoped to the dedicated cross-browser configuration. Three isolated Firefox runs and three complete cross-browser runs then completed without failure, so no locator-level timeout or retry was added.
 
 ## 17. Internationalization Coverage
 

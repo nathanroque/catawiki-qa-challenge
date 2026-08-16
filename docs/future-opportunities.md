@@ -17,7 +17,7 @@ The current cross-browser strategy runs only the critical smoke journey across C
 During implementation, concurrent multi-browser execution showed timing instability against production, so the cross-browser configuration currently uses:
 
 ```ts
-workers: 1
+workers: 1;
 ```
 
 Running the entire UI suite across all three browser engines with serialized execution would significantly increase runtime and production traffic.
@@ -46,6 +46,23 @@ The current I18N scenario validates switching from English to Dutch and preservi
 Additional locales, currency formatting, date formatting, and broader translation checks could be added later.
 
 During implementation, we observed that search results can differ between locales, so future I18N tests should continue using stable application-owned UI as the oracle rather than assuming identical marketplace content.
+
+### Search result view preference persistence
+
+Manual exploration identified both gallery and normal search-result views through the `view-mode-gallery` and `view-mode-normal` controls.
+
+The selected mode appeared to persist across navigation and later visits, which makes this a meaningful future preference-persistence scenario rather than a cosmetic variation of the existing search test.
+
+The persistence mechanism was not established and should not be assumed to be cookies, local storage or any other specific client-side implementation.
+
+Future coverage could validate:
+
+- Switching between gallery and normal views
+- Persistence after search-result navigation and return
+- Persistence after a reload or another explicitly defined persistence boundary
+- Compatibility of the existing result-selection behavior with both presentation modes
+
+This remains deferred because the current submission prioritizes higher-risk reliability and integration work, and the existing tests do not currently depend on a persisted non-default view.
 
 ### Additional edge and negative coverage
 
@@ -90,7 +107,7 @@ The most valuable infrastructure improvement would be running the existing produ
 
 GitHub-hosted runners received `403 Forbidden / Access Denied` responses from the production edge layer.
 
-The project therefore intentionally keeps hosted CI limited to static validation instead of attempting to bypass those restrictions.
+The project therefore intentionally keeps hosted CI limited to deterministic repository validation and Playwright discovery instead of attempting to bypass those restrictions.
 
 A future approved or self-hosted runner could enable:
 
@@ -142,6 +159,30 @@ I18N
 
 This would avoid running every expensive scenario on every code change.
 
+### Parameterized CI execution
+
+A future CI pipeline could support manually or automatically selecting execution dimensions such as:
+
+- Target browser
+- Locale
+- Target environment
+- Test scope
+
+For example:
+
+```text
+Environment: controlled-test
+Browser: firefox
+Locale: nl
+Scope: smoke
+```
+
+This could allow the same automation framework to support targeted validation without duplicating workflows.
+
+It was not implemented because the current project has only one available target environment, the implemented I18N coverage intentionally validates a specific English-to-Dutch journey, and production-facing execution is currently unavailable from GitHub-hosted runners.
+
+If an approved CI environment became available, these dimensions could be exposed through pipeline inputs and mapped to Playwright projects, configuration, environment variables, and test tags.
+
 ## Framework Opportunities
 
 ### Custom fixtures
@@ -183,6 +224,20 @@ Future work could include:
 - Manual WCAG evaluation
 
 Automated scans should not be treated as proof of full accessibility compliance.
+
+### Responsive and mobile viewport coverage
+
+The current implemented browser coverage focuses on desktop configurations.
+
+A future responsive strategy could use Playwright device profiles to validate a small number of high-value mobile and tablet experiences rather than only resizing the desktop viewport.
+
+Useful targets could include:
+
+- Search interaction on a representative mobile device profile
+- Search-result layout and navigation on tablet-sized experiences
+- Critical lot-detail content remaining reachable and usable at narrower widths
+
+This should remain risk-based and selective so that device coverage does not simply multiply the entire suite without a clear compatibility signal.
 
 ### Real Safari validation
 
@@ -232,7 +287,7 @@ A reasonable next sequence would be:
 2. Run the existing suite automatically.
 3. Publish test reports and diagnostics from CI.
 4. Re-evaluate broader cross-browser execution.
-5. Expand P2 edge coverage based on real product risk.
+5. Expand P2 coverage based on real product risk, including preference persistence or responsive behavior where justified.
 6. Add broader I18N and accessibility coverage.
 7. Introduce authenticated and state-changing scenarios only in a controlled environment.
 8. Add visual, performance, and security testing where appropriate.

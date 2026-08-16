@@ -20,7 +20,6 @@ Use Playwright with TypeScript.
 - CI/CD integration
 - TypeScript type safety
 
-
 ## Alternatives considered
 
 - Cypress

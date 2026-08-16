@@ -10,17 +10,17 @@ Automated accessibility scanning is performed with `@axe-core/playwright`.
 
 The landing-page baseline currently contains the following recurring high-severity axe rule IDs:
 
-| Rule ID | Impact |
-|---|---|
-| `aria-hidden-focus` | serious |
-| `aria-required-children` | critical |
-| `aria-required-parent` | critical |
-| `button-name` | critical |
-| `color-contrast` | serious |
-| `link-name` | serious |
-| `nested-interactive` | serious |
-| `scrollable-region-focusable` | serious |
-| `svg-img-alt` | serious |
+| Rule ID                       | Impact   |
+| ----------------------------- | -------- |
+| `aria-hidden-focus`           | serious  |
+| `aria-required-children`      | critical |
+| `aria-required-parent`        | critical |
+| `button-name`                 | critical |
+| `color-contrast`              | serious  |
+| `link-name`                   | serious  |
+| `nested-interactive`          | serious  |
+| `scrollable-region-focusable` | serious  |
+| `svg-img-alt`                 | serious  |
 
 Repeated exploratory and full-suite executions identified the rule IDs currently included in the landing-page baseline.
 
@@ -52,20 +52,15 @@ This indicates that the production edge restrictions observed during local headl
 
 The workflow does not attempt to bypass this restriction through altered headers, retries, or other anti-automation workarounds.
 
-Production-facing automated scenarios are therefore kept outside the current GitHub-hosted workflow, while static validation remains suitable for unattended CI execution.
+Production-facing automated scenarios are therefore kept outside the current GitHub-hosted workflow. The hosted pipeline instead runs the deterministic `quality` gate (type checking, ESLint, Prettier format checking and schema-validator unit tests) plus Playwright discovery for the default and cross-browser configurations.
 
-### Accessibility scan execution cost
+### Accessibility scan execution cost and readiness
 
-Individual accessibility scans were reliable during exploratory execution, but
-repeated full-suite execution showed that multiple concurrent full-page axe
-scans could exceed the default Playwright test timeout.
+Full-page axe scans have a higher execution cost than the functional scenarios and retain a dedicated 60-second timeout.
 
-The accessibility scenarios are therefore serialized and use a dedicated
-60-second timeout.
+The accessibility scenarios were initially serialized, but serial mode was removed because the page contexts are independent and a failure in one scan should not skip later scans. Each scenario now waits for meaningful page readiness before running Axe: visible search results for the search page and a visible lot title after lot navigation.
 
-Other test layers retain the normal execution model and default timeout. This
-keeps the mitigation scoped to the workload that demonstrated the additional
-execution cost rather than increasing timeouts globally.
+After these readiness changes, the accessibility suite completed three repeated runs with two workers without failure. The mitigation therefore remains scoped to accessibility timing without introducing logical test dependencies.
 
 ### Internationalization execution timing
 
@@ -81,43 +76,33 @@ Three consecutive full-suite executions completed successfully after this adjust
 
 ### Cookie consent
 
-Fresh browser contexts may display a Usercentrics cookie-consent dialog that can intercept normal page interaction.
+Fresh browser contexts may initialize the Usercentrics consent component several seconds after page navigation begins. During direct browser investigation, `DOMContentLoaded` completed roughly 1.4–2.1 seconds after navigation while the blocking consent overlay became visible roughly 4.7–5.7 seconds after navigation.
 
-The automation dismisses the dialog through the user-facing `Continue without accepting` action when it is present.
+The observed structure was:
 
-During framework refinement, an alternative approach was investigated to determine whether the consent state could be preloaded through Playwright rather than handled through the UI.
+```text
+aside#usercentrics-cmp-ui
+└── open shadow root
+    ├── #uc-overlay
+    └── #uc-main-dialog
+        └── a#uc-close-icon
+```
 
-Browser storage was compared before and after selecting `Continue without accepting`.
+The host itself is not a reliable visibility signal: it can have zero height and remains in the document after dismissal. The full-screen `#uc-overlay` is the element that blocks the application through pointer interception.
 
-The investigation found that:
+The dismissal action also does not provide a reliable semantic locator. It is an anchor without `href`, explicit role, `aria-label` or test ID, and Playwright did not expose it as a button or link. Its text is also not stable across locale; an `/en` visit was observed rendering the Portuguese `Continuar sem aceitar` label.
 
-- `cookie_preferences_used_cta=reject_all` is created after the action;
-- `has_pending_cookie_consent_sync=true` is also created;
-- neither cookie, individually or together, is sufficient to suppress the dialog in a fresh browser context;
-- a Usercentrics `localStorage` value named `ucString` is sufficient to suppress the dialog;
-- equivalent rejection flows produced different `ucString` values.
+The implemented helper therefore:
 
-The stored `ucString` is opaque and appears coupled to the active Usercentrics configuration, including factors such as service configuration, controller state, versions, and potentially locale or dynamic metadata.
+- waits for the scoped `#uc-overlay` to become visible within a bounded initialization window;
+- uses the vendor-specific `#uc-close-icon` action isolated inside the support utility;
+- allows Playwright's normal actionability checks to perform the click;
+- verifies that the blocking overlay becomes hidden or detached before continuing;
+- does not use arbitrary sleeps, forced clicks or a general retry loop.
 
-For this reason, hard-coding the value in Playwright configuration or a shared `storageState` was intentionally rejected.
+Browser storage was also investigated. An opaque Usercentrics `localStorage` value could suppress the dialog, but equivalent rejection flows produced different values. Hard-coding that third-party state was rejected because it would be more tightly coupled to Usercentrics internals than the isolated UI helper.
 
-Although preloading the value would remove the UI interaction, it would introduce dependency on an internal third-party consent representation that is less stable and less understandable than using the application's normal rejection flow.
-
-Cookie-consent handling is therefore kept as a small environment-support utility that interacts with the public UI when required.
-
-A maintained internal test platform could instead generate and periodically refresh a validated consent storage state, but that additional infrastructure is not justified for the scope of this assessment.
-
-Repeated full-suite execution later exposed an additional timing condition:
-Usercentrics may complete initialization after the initial navigation-time
-consent check.
-
-In one observed failure, the search control was already visible and enabled,
-but the consent overlay intercepted pointer events until the test timeout was
-reached.
-
-Cookie handling is therefore also applied immediately before interactions that
-may be blocked by a late consent overlay rather than forcing clicks through the
-component.
+After this change, the complete default suite passed three consecutive runs, and the accessibility suite also passed three repeated runs with two workers.
 
 ### Dynamic production data
 
@@ -134,6 +119,8 @@ The primary search page is server-rendered and returns an HTML document containi
 A direct attempt to retrieve the search document through Playwright `APIRequestContext` received `403 Access Denied`.
 
 The implementation was therefore redesigned as a UI/API integration test rather than attempting to bypass the production edge behavior.
+
+The integration test was later strengthened to compare shared runtime business state for the selected lot. The displayed favourite count is compared with `favorite_count`, and the displayed euro current bid is compared with `current_bid_amount.EUR`, in addition to correlating the runtime lot identifier.
 
 ### Read-only JSON endpoints
 
@@ -250,16 +237,16 @@ page context, it remains part of the known baseline.
 Affected-node counts varied between executions, reinforcing the decision to
 baseline accessibility debt by rule ID rather than exact node count.
 
-### Cross-browser execution concurrency
+### Cross-browser execution concurrency and timing
 
 The critical smoke journey was successfully executed independently in Chromium, Firefox, and WebKit.
 
-When the broader multi-project execution ran with normal local concurrency, intermittent timeouts were observed in the Firefox and WebKit smoke executions.
+Earlier concurrent multi-project execution produced intermittent timeouts in Firefox and WebKit at different stages of the live journey. The dedicated cross-browser configuration therefore retains a single worker, both to preserve the stable execution mode already demonstrated and to avoid unnecessary concurrent traffic against production.
 
-The failures occurred at different stages, including lot navigation completion and a search interaction blocked by a late Usercentrics consent overlay.
+After the Usercentrics helper was hardened, repeated cross-browser execution exposed a separate Firefox timing issue: twice in three runs, the default 30-second test budget expired while waiting for the bid-status content near the end of the lot-details flow. The failure was the test-level budget being exhausted, not a demonstrated defect in the bid locator.
 
-Because the same browser scenarios succeeded independently, the behavior was treated as an execution-reliability concern rather than evidence of a browser-specific functional defect.
+The cross-browser configuration was given a scoped 45-second timeout rather than increasing locator timeouts, enabling retries, or changing the default Chromium timeout.
 
-A subsequent execution using a single worker completed successfully across the full configured run.
+Validation after the change completed successfully in three isolated Firefox runs and three complete Chromium/Firefox/WebKit runs.
 
-Cross-browser smoke validation is therefore executed serially through a dedicated configuration while the normal Chromium suite retains its existing parallel execution model.
+The normal Chromium suite retains its existing execution model.
