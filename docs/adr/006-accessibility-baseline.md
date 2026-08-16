@@ -35,6 +35,8 @@ Known violations will be stored separately from the test implementation so that 
 
 Accessibility scans will initially act as regression and reporting signals rather than strict zero-violation pull-request gates.
 
+Each page context must establish meaningful UI readiness before Axe runs, and accessibility scenarios remain independently executable rather than depending on serial ordering.
+
 ## Reasons
 
 ### Preserve a useful regression signal
@@ -112,3 +114,5 @@ Existing accessibility findings remain visible and reviewable.
 Each new page or application state should be explored before defining its baseline rather than automatically inheriting the landing-page known violations.
 
 New high-severity rule IDs will fail the corresponding accessibility test and require investigation.
+
+Independent execution also means a failure in one accessibility scenario does not prevent the remaining page contexts from producing their regression signal.

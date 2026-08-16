@@ -124,20 +124,23 @@ Potentially valuable under different environmental or organizational conditions,
 
 ## 5. Coverage Overview
 
-| ID       | Scenario                                                                           | Layer                         | Priority     | Status             | Intended CI Target |
-| -------- | ---------------------------------------------------------------------------------- | ----------------------------- | ------------ | ------------------ | ------------------ |
-| E2E-001  | Search `Train` → open second lot → validate lot details and identity               | E2E / Smoke                   | P0           | PR                 | Implemented        |
-| E2E-002  | Nonsense search → no exact results message + related-object fallback               | E2E / Negative                | P1           | PR                 | Implemented        |
-| API-001  | Second Train search lot has consistent bidding API state                           | UI/API Integration + Contract | P1           | PR                 | Implemented        |
-| API-002  | Lot navigation remains internally consistent                                       | API + Contract                | P1           | PR                 | Implemented        |
-| A11Y-001 | Landing page has no unexpected serious or critical accessibility violations        | Accessibility                 | P1           | Scheduled / Report | Implemented        |
-| A11Y-002 | Search results page has no unexpected serious or critical accessibility violations | Accessibility                 | P1           | Scheduled / Report | Implemented        |
-| A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations    | Accessibility                 | P1           | Scheduled / Report | Implemented        |
-| XB-001   | Critical journey runs across Chromium, Firefox and WebKit                          | Cross-browser                 | P1           | Nightly            | Implemented        |
-| E2E-003  | Search handles benign special characters gracefully                                | E2E / Edge                    | P2           | Nightly            | Candidate          |
-| I18N-001 | Selected language persists across the critical journey                             | Internationalization          | P2           | Nightly            | Implemented        |
-| I18N-002 | Sampled interface text predominantly matches selected language                     | Internationalization          | Experimental | Nightly            | Candidate          |
-| VIS-001  | Stable UI region matches approved visual baseline                                  | Visual                        | P2           | Nightly            | Candidate          |
+| ID       | Scenario                                                                           | Layer                         | Priority     | Status      | Intended CI Target |
+| -------- | ---------------------------------------------------------------------------------- | ----------------------------- | ------------ | ----------- | ------------------ |
+| E2E-001  | Search `Train` → open second lot → validate lot details and identity               | E2E / Smoke                   | P0           | Implemented | PR                 |
+| E2E-002  | Nonsense search → no exact results message + related-object fallback               | E2E / Negative                | P1           | Implemented | PR                 |
+| API-001  | Second Train search lot has consistent bidding API state                           | UI/API Integration + Contract | P1           | Implemented | PR                 |
+| API-002  | Lot navigation remains internally consistent                                       | API + Contract                | P1           | Implemented | PR                 |
+| UNIT-001 | Bidding-state runtime schema validator accepts and rejects representative payloads | Unit / Schema                 | P1           | Implemented | PR                 |
+| UNIT-002 | Lot-navigation runtime schema validator accepts and rejects representative payloads | Unit / Schema                 | P1           | Implemented | PR                 |
+| A11Y-001 | Landing page has no unexpected serious or critical accessibility violations        | Accessibility                 | P1           | Implemented | Scheduled / Report |
+| A11Y-002 | Search results page has no unexpected serious or critical accessibility violations | Accessibility                 | P1           | Implemented | Scheduled / Report |
+| A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations    | Accessibility                 | P1           | Implemented | Scheduled / Report |
+| XB-001   | Critical journey runs across Chromium, Firefox and WebKit                          | Cross-browser                 | P1           | Implemented | Nightly            |
+| E2E-003  | Search handles benign special characters gracefully                                | E2E / Edge                    | P2           | Candidate   | Nightly            |
+| E2E-004  | Search result view preference persists between gallery and normal modes             | E2E / Preference              | P2           | Candidate   | Nightly            |
+| I18N-001 | Selected language persists across the critical journey                             | Internationalization          | P2           | Implemented | Nightly            |
+| I18N-002 | Sampled interface text predominantly matches selected language                     | Internationalization          | Experimental | Candidate   | Nightly            |
+| VIS-001  | Stable UI region matches approved visual baseline                                  | Visual                        | P2           | Candidate   | Nightly            |
 
 ## 6. P0 Coverage
 
@@ -180,7 +183,9 @@ Values such as:
 
 are discovered dynamically during execution.
 
-The test validates their existence, structure and consistency instead of comparing them against hard-coded production values.
+The test validates their existence, structure and consistency instead of comparing them against hard-coded production values. It also states the dynamic-data precondition explicitly by requiring at least two visible search results before selecting the second lot.
+
+The bid section is read by its semantic state (`Current bid` or `Starting bid`) and associated amount. Because the assignment specifically requires the current bid, the P0 scenario fails with a clear diagnostic if the dynamically selected second lot is temporarily in a starting-bid state rather than silently treating a starting bid as a current bid.
 
 #### Assignment output
 
@@ -612,6 +617,28 @@ The critical journey already proves that a search result can be selected and ope
 
 Tests that only change the selected position would largely duplicate existing behavior.
 
+### Search result view preference persistence
+
+Manual exploration identified two search-result presentation modes exposed through stable controls:
+
+```text
+view-mode-gallery
+view-mode-normal
+```
+
+Changing the selected view appeared to persist across subsequent navigation and later visits.
+
+The persistence mechanism was not established, so the current project should not assume whether the preference is stored in cookies, local storage or another client-side mechanism.
+
+A future scenario could validate that:
+
+- the user can switch between gallery and normal result views;
+- the selected mode remains active after navigating through search results and returning;
+- the preference remains active after a reload or other clearly defined persistence boundary;
+- search-result interaction remains functional in both presentation modes.
+
+This was intentionally left as a P2 candidate because it represents a distinct preference-persistence risk but provides less value than the reliability, integration and CI hardening completed for the current submission.
+
 ### Pagination
 
 Pagination represents a potentially meaningful independent workflow and may be considered later.
@@ -694,6 +721,8 @@ Both implemented API-related scenarios include runtime validation of the respons
 
 Contract validation is intentionally limited to fields relevant to the implemented scenarios, while behavioral and cross-response assertions remain in the tests.
 
+The runtime validators are additionally covered by deterministic unit tests for accepted and rejected payloads. These tests exercise schema logic without requiring browser startup or production access and are part of the hosted CI quality gate.
+
 #### API-001 — Bidding State Contract
 
 **Layer:** UI/API Integration + Contract  
@@ -706,19 +735,20 @@ Scenario: Second Train search lot has consistent bidding API state
 
   Given I am on the Catawiki landing page
   When I search for "Train"
-  And I identify the second lot from the search results
+  And I identify and open the second lot from the search results
+  And I capture its displayed favourite count and current bid
   And I request the bidding state for that lot
   Then the bidding response should contain the selected lot
-  And the lot should have a valid auction identifier
-  And its favourite count should be a non-negative integer
-  And its bidding period should be structurally valid
+  And the API favourite count should match the displayed favourite count
+  And the API EUR current bid should match the displayed euro current bid
+  And the bidding response should satisfy the selected runtime schema expectations
 ```
 
 ##### Test intent
 
-This scenario validates a read-only JSON contract used by the public application.
+This scenario combines read-only runtime schema validation with a meaningful UI/API consistency check.
 
-Assertions should focus on stable properties such as identifiers, types, timestamp ordering and non-negative counters rather than exact live auction values.
+The UI and API are correlated using runtime lot identity, then shared business state is compared across layers: favourite count and the EUR current bid. Structural API expectations remain in the schema validator rather than being presented as UI/API comparisons.
 
 #### API-002 — Lot Navigation Consistency
 
@@ -745,6 +775,49 @@ Scenario: Auction navigation remains internally consistent
 This test validates relationships across multiple API responses rather than only checking individual response fields.
 
 The assertions deliberately avoid hard-coded lot IDs, auction positions or auction sizes.
+
+#### UNIT-001 — Bidding-State Schema Validator
+
+**Layer:** Unit / Schema  
+**Priority:** P1  
+**CI target:** Pull Request  
+**Status:** Implemented
+
+##### Test intent
+
+The bidding-state runtime validator is exercised with deterministic in-memory payloads so its behavior can be verified without production access.
+
+The unit coverage includes representative cases for:
+
+- A valid response containing current bid amounts
+- A valid response with no current bid
+- An invalid negative favourite count
+- Malformed currency values
+- An invalid bidding time range
+
+These tests complement the production-facing API and integration scenarios by validating the validator itself rather than relying on a live endpoint to exercise every branch.
+
+#### UNIT-002 — Lot-Navigation Schema Validator
+
+**Layer:** Unit / Schema  
+**Priority:** P1  
+**CI target:** Pull Request  
+**Status:** Implemented
+
+##### Test intent
+
+The lot-navigation runtime validator is also covered with deterministic in-memory payloads.
+
+The unit coverage verifies:
+
+- A valid navigation response
+- Valid `null` adjacent lot identifiers
+- Rejection of non-integer adjacent lot identifiers
+- Rejection of invalid adjacent lot identifier types
+
+The non-integer case exposed a real weakness in the original runtime validator, which was then tightened to require adjacent lot identifiers to be `integer | null`.
+
+Both schema-validator unit suites are included in the deterministic `npm run quality` gate used by hosted CI.
 
 ### Production Safety
 
@@ -839,30 +912,27 @@ Cookie consent and locale handling are explicit environment preconditions for th
 
 The primary journey should navigate directly to the English locale.
 
-If the consent dialog is present, the automation should dismiss it through the user-facing decline/continue-without-accepting action and verify that the dialog is actually removed before interacting with the application.
+Fresh contexts can initialize Usercentrics several seconds after the page itself becomes visible. The automation therefore waits for the actual blocking `#uc-overlay` state, dismisses the observed Usercentrics action through the scoped `#uc-close-icon` locator, and verifies that the overlay becomes hidden before interacting with the application.
+
+The vendor-specific selector is intentionally isolated in the environment-support helper because the observed dismissal action has no reliable semantic role and its visible text can be localized independently of the `/en` route.
 
 Where handling is required, automation should:
 
-- Interact through user-facing controls
-- Avoid DOM implementation details where possible
-- Avoid arbitrary waits
-- Avoid unnecessary consent
-- Keep environment setup deterministic
+- Synchronize on the observable blocking overlay rather than page-load timing
+- Avoid arbitrary waits and forced clicks
+- Avoid hard-coded opaque Usercentrics storage values
+- Verify that the blocker is gone before continuing
+- Keep vendor-specific implementation knowledge isolated in one support helper
 
 Reusable handling may later be moved into common test setup if repetition justifies the abstraction.
 
 Cookie handling should support the tests rather than become an unnecessary framework of its own.
 
-Repeated full-suite execution also showed that the consent component may finish
-initializing after the initial page-navigation handling has completed.
+The late initialization behavior is handled within the initial environment setup by waiting for the observable blocking overlay during its bounded initialization window.
 
-For interactions that can be blocked by a late consent overlay, the environment
-support utility may therefore be invoked again immediately before the relevant
-interaction.
+After dismissal, exploratory testing did not show the consent overlay returning during normal reload or same-context navigation, so consent handling is not repeated inside each Page Object action.
 
-This is intentionally preferred over forcing Playwright clicks through the
-overlay because the goal is to reproduce a valid user interaction rather than
-bypass an active UI layer.
+This keeps environment setup separate from business behavior while still reproducing a valid user interaction rather than forcing clicks through an active UI layer.
 
 ## 16. Reliability Strategy
 
@@ -891,22 +961,15 @@ This helps distinguish contract or business-rule failures from transient or
 environmental HTTP failures without introducing automatic retries that could
 hide instability.
 
-### Accessibility execution isolation
+### Accessibility execution readiness
 
-Repeated full-suite execution showed that running multiple full-page axe scans
-concurrently could increase execution time enough to exceed the default test
-timeout.
+Full-page axe scans have a higher execution cost than the functional scenarios, so accessibility coverage retains a dedicated 60-second timeout.
 
-Accessibility scenarios are therefore executed serially and use a dedicated
-60-second timeout while the remainder of the suite retains normal parallel
-execution.
+The accessibility scenarios remain logically independent rather than using Playwright serial mode. Before each scan, the test waits for meaningful page readiness: search results must be visible before scanning the results page, and the lot title must be visible after lot navigation before scanning the details page.
 
-This keeps the broader suite fast while isolating the higher execution cost of
-full-page accessibility analysis.
+Repeated accessibility execution with two workers completed successfully after these readiness changes. This preserves independent failure reporting while avoiding a serial dependency where one failed scan could cause later page contexts to be skipped.
 
-The timeout adjustment is scoped to accessibility tests rather than applied
-globally because unrelated scenarios have not demonstrated a general need for
-a longer execution budget.
+The timeout adjustment remains scoped to accessibility tests rather than applied globally.
 
 ### Internationalization execution budget
 
@@ -1049,10 +1112,18 @@ Current GitHub-hosted coverage:
 ```text
 Dependency installation
         ↓
-TypeScript type check
+Quality gate
+├── TypeScript type check
+├── ESLint
+├── Prettier format check
+└── Schema validator unit tests
+        ↓
+Playwright test discovery
+├── Default Chromium configuration
+└── Cross-browser smoke configuration
 ```
 
-The initial workflow also attempted to execute the pure read-only API scenario.
+The initial workflow also attempted to execute the pure read-only API scenario. After the production-access restriction was confirmed, the hosted workflow was strengthened with deterministic linting, formatting, schema-validator unit tests and Playwright discovery instead of adding more production traffic.
 
 Repository checkout, dependency installation, and TypeScript validation completed successfully, but the production API request received a `403 Forbidden / Access Denied` response from the Catawiki production edge layer.
 
@@ -1144,7 +1215,7 @@ Cross-browser validation
 
 The separation avoids multiplying API, integration, negative, and accessibility scenarios across browsers when those tests do not provide equivalent browser-compatibility value.
 
-Single-worker execution is deliberate. Concurrent multi-browser execution against the production application produced intermittent timeouts, while isolated browser runs and the serialized cross-browser execution completed successfully.
+Single-worker execution is deliberate. Concurrent multi-browser execution against the production application produced intermittent timeouts, while isolated browser runs and serialized cross-browser execution completed successfully. The dedicated configuration also uses a scoped 45-second test timeout after Firefox repeatedly exhausted the default 30-second journey budget late in the lot-details flow; repeated isolated Firefox and complete cross-browser runs passed after that adjustment.
 
 With an approved production-facing CI environment, the cross-browser smoke configuration would be a suitable candidate for scheduled execution.
 

@@ -20,6 +20,8 @@ The failures occurred at different stages of the journey, including navigation c
 
 Running the configured execution with a single worker completed successfully.
 
+Later repeated validation, after cookie-consent handling was hardened, showed that Firefox could still exhaust the default 30-second test budget near the end of the live lot-details journey. A 45-second timeout scoped only to the dedicated cross-browser configuration resolved that timing margin in repeated isolated Firefox and complete cross-browser runs.
+
 The complete test suite does not need to execute across every browser because API, contract, integration, and accessibility scenarios do not all gain equivalent value from browser multiplication.
 
 ## Decision
@@ -32,7 +34,8 @@ The default `playwright.config.ts` remains Chromium-only and retains the normal 
 
 - runs only scenarios tagged `@smoke`;
 - defines Chromium, Firefox, and WebKit projects;
-- executes with a single worker.
+- executes with a single worker;
+- uses a scoped 45-second test timeout for the longer live cross-browser journey.
 
 The existing P0 test implementation is reused across browser projects rather than duplicated into browser-specific test files.
 
@@ -66,7 +69,9 @@ Rejected because normal `playwright test` execution would implicitly trigger cro
 
 ### Increase global timeouts
 
-Rejected because the isolated browser scenarios already completed successfully and increasing the timeout globally would affect unrelated tests without addressing the observed execution pattern.
+Rejected because increasing the default timeout for the whole project would affect unrelated tests.
+
+A later Firefox-specific timing observation justified a different, narrower decision: the dedicated cross-browser configuration uses a 45-second test budget while the normal Chromium configuration keeps its existing timeout.
 
 ### Add retries
 
