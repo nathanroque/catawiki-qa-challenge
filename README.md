@@ -168,6 +168,12 @@ npx playwright test tests/integration --project=chromium
 npx playwright test tests/accessibility --project=chromium
 ```
 
+### Run internationalization tests
+
+```bash
+npx playwright test tests/i18n --project=chromium
+```
+
 ### Run smoke tests in Chromium
 
 ```bash
