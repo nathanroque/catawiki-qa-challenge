@@ -18,9 +18,9 @@ test('second Train search lot has consistent bidding API state @api @integration
       await searchPage.goto();
       await searchPage.searchFor('Train');
 
-    await expect(
-      searchResultsPage.lots.first()
-    ).toBeVisible();
+      await expect(
+        searchResultsPage.lots.first()
+      ).toBeVisible();
 
       return searchResultsPage.getLotId(1);
     }

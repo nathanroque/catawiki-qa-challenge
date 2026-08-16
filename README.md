@@ -59,10 +59,11 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   └── i18n/
 │
 ├── docs/
+│   ├── adr/
 │   ├── approach.md
 │   ├── findings.md
-│   ├── test-plan.md
-│   └── adr/
+│   ├── future-opportunities.md
+│   └── test-plan.md
 │
 ├── .github/
 │   └── workflows/
@@ -244,6 +245,7 @@ See:
 - [`docs/approach.md`](docs/approach.md) — how the solution evolved during exploration and implementation
 - [`docs/findings.md`](docs/findings.md) — notable observations discovered during testing
 - [`docs/adr/`](docs/adr/) — architectural decisions and trade-offs
+- [`docs/future-opportunities.md`](docs/future-opportunities.md) — deliberately deferred improvements and possible next steps
 
 ## Production Safety
 

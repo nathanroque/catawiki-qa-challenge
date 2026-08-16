@@ -4,7 +4,7 @@ import { Page } from '@playwright/test';
  * Encapsulates read-only information exposed on a Catawiki lot details page.
  */
 export class LotPage {
-  constructor(private readonly page: Page) {}
+  constructor(private readonly page: Page) { }
 
   /**
    * Locator for the primary lot title heading.

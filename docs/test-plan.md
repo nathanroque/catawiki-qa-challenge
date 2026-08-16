@@ -120,7 +120,7 @@ Potentially valuable under different environmental or organizational conditions,
 
 
 ## 5. Coverage Overview
-| ID | Scenario | Layer | Priority | CI Target | Status |
+| ID | Scenario | Layer | Priority | Status | Intended CI Target |
 |---|---|---|---|---|---|
 | E2E-001 | Search `Train` → open second lot → validate lot details and identity | E2E / Smoke | P0 | PR | Implemented |
 | E2E-002 | Nonsense search → no exact results message + related-object fallback | E2E / Negative | P1 | PR | Implemented |
