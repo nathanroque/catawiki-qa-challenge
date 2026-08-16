@@ -1,31 +1,37 @@
-import { Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
- * Dismisses the optional production cookie-consent dialog through
- * its user-facing "Continue without accepting" action when present.
+ * Dismisses the Usercentrics consent overlay when it appears.
  *
- * The consent state is intentionally handled through the UI instead
- * of preloading Usercentrics storage values because the persisted
- * `ucString` is opaque and configuration-dependent.
- *
- * @param page Active Playwright page.
+ * The consent component initializes asynchronously after navigation,
+ * so the helper waits for the actual blocking overlay rather than
+ * relying on the dismissal action text or host visibility.
  */
-export async function dismissCookieConsentIfPresent(
-  page: Page
-): Promise<void> {
-  const continueWithoutAccepting = page.getByText(
-    'Continue without accepting',
-    { exact: true }
-  );
+export async function dismissCookieConsentIfPresent(page: Page): Promise<void> {
+  const consent = page.locator('#usercentrics-cmp-ui');
+  const overlay = consent.locator('#uc-overlay');
 
-  await continueWithoutAccepting
-    .waitFor({
+  try {
+    await overlay.waitFor({
       state: 'visible',
-      timeout: 3000,
-    })
-    .catch(() => { });
-
-  if (await continueWithoutAccepting.isVisible()) {
-    await continueWithoutAccepting.click();
+      timeout: 8_000,
+    });
+  } catch {
+    return;
   }
+
+  try {
+    await consent.locator('#uc-close-icon').click({
+      timeout: 3_000,
+    });
+  } catch (error) {
+    if (await overlay.isVisible()) {
+      throw error;
+    }
+  }
+
+  await overlay.waitFor({
+    state: 'hidden',
+    timeout: 3_000,
+  });
 }

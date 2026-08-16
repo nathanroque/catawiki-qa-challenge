@@ -21,22 +21,37 @@ export function validateBiddingStateSchema(body: unknown) {
     expect(Number.isInteger(biddingLot.id)).toBeTruthy();
     expect(Number.isInteger(biddingLot.auction_id)).toBeTruthy();
 
+    const currentBidAmount = biddingLot.current_bid_amount;
+
     expect(
-      biddingLot.current_bid_amount === null ||
-      typeof biddingLot.current_bid_amount === 'object'
+      currentBidAmount === null || typeof currentBidAmount === 'object',
     ).toBeTruthy();
 
-    expect(Number.isInteger(biddingLot.favorite_count))
-      .toBeTruthy();
+    if (currentBidAmount !== null && typeof currentBidAmount === 'object') {
+      const amounts = currentBidAmount as Record<string, unknown>;
 
-    expect(typeof biddingLot.bidding_start_time)
-      .toBe('string');
+      expect(typeof amounts.EUR).toBe('number');
+      expect(typeof amounts.USD).toBe('number');
+      expect(typeof amounts.GBP).toBe('number');
 
-    expect(typeof biddingLot.bidding_end_time)
-      .toBe('string');
+      expect(amounts.EUR).toBeGreaterThanOrEqual(0);
+      expect(amounts.USD).toBeGreaterThanOrEqual(0);
+      expect(amounts.GBP).toBeGreaterThanOrEqual(0);
+    }
 
-    expect(typeof biddingLot.closed)
-      .toBe('boolean');
+    expect(Number.isInteger(biddingLot.favorite_count)).toBeTruthy();
+
+    expect(biddingLot.favorite_count as number).toBeGreaterThanOrEqual(0);
+
+    const biddingStart = Date.parse(biddingLot.bidding_start_time as string);
+
+    const biddingEnd = Date.parse(biddingLot.bidding_end_time as string);
+
+    expect(biddingStart).not.toBeNaN();
+    expect(biddingEnd).not.toBeNaN();
+    expect(biddingStart).toBeLessThan(biddingEnd);
+
+    expect(typeof biddingLot.closed).toBe('boolean');
   }
 
   const meta = response.meta as Record<string, unknown>;

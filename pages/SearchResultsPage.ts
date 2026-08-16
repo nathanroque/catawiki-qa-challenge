@@ -4,15 +4,13 @@ import { Page } from '@playwright/test';
  * Encapsulates read-only interactions with the Catawiki search results page.
  */
 export class SearchResultsPage {
-  constructor(private readonly page: Page) { }
+  constructor(private readonly page: Page) {}
 
   /**
    * Locator representing the lot cards currently rendered in the result list.
    */
   get lots() {
-    return this.page.locator(
-      '[data-testid^="lot-card-container-"]'
-    );
+    return this.page.locator('[data-testid^="lot-card-container-"]');
   }
 
   /**
@@ -31,9 +29,7 @@ export class SearchResultsPage {
    * @returns Lot title, or null when no text content is available.
    */
   async getLotTitle(index: number): Promise<string | null> {
-    return this.getLot(index)
-      .locator('.c-lot-card__title')
-      .textContent();
+    return this.getLot(index).locator('.c-lot-card__title').textContent();
   }
 
   /**
@@ -43,9 +39,7 @@ export class SearchResultsPage {
    * @returns Lot URL, or null when the result does not expose an href.
    */
   async getLotHref(index: number): Promise<string | null> {
-    return this.getLot(index)
-      .getByRole('link')
-      .getAttribute('href');
+    return this.getLot(index).getByRole('link').getAttribute('href');
   }
 
   /**
@@ -54,9 +48,7 @@ export class SearchResultsPage {
    * @param index Zero-based position in the current result list.
    */
   async openLot(index: number): Promise<void> {
-    await this.getLot(index)
-      .getByRole('link')
-      .click();
+    await this.getLot(index).getByRole('link').click();
   }
 
   /**
@@ -70,17 +62,13 @@ export class SearchResultsPage {
     const href = await this.getLotHref(index);
 
     if (!href) {
-      throw new Error(
-        `Lot at index ${index} does not contain a link`
-      );
+      throw new Error(`Lot at index ${index} does not contain a link`);
     }
 
     const match = href.match(/\/l\/(\d+)/);
 
     if (!match) {
-      throw new Error(
-        `Could not extract lot ID from URL: ${href}`
-      );
+      throw new Error(`Could not extract lot ID from URL: ${href}`);
     }
 
     return Number(match[1]);

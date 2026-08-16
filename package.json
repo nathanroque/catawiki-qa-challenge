@@ -5,8 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
+    "test:unit": "playwright test tests/unit --project=chromium",
     "test:cross-browser": "playwright test --config=playwright.cross-browser.config.ts",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "quality": "npm run typecheck && npm run lint && npm run format:check && npm run test:unit",
     "report": "playwright show-report",
     "report:cross-browser": "playwright show-report playwright-report-cross-browser"
   },
@@ -24,8 +29,12 @@
   "homepage": "https://github.com/nathanroque/catawiki-qa-challenge#readme",
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
-    "typescript": "^7.0.2"
+    "eslint": "^10.8.1",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0"
   }
 }

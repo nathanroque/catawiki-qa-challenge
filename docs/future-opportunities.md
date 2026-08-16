@@ -17,7 +17,7 @@ The current cross-browser strategy runs only the critical smoke journey across C
 During implementation, concurrent multi-browser execution showed timing instability against production, so the cross-browser configuration currently uses:
 
 ```ts
-workers: 1
+workers: 1;
 ```
 
 Running the entire UI suite across all three browser engines with serialized execution would significantly increase runtime and production traffic.
@@ -141,6 +141,30 @@ I18N
 ```
 
 This would avoid running every expensive scenario on every code change.
+
+### Parameterized CI execution
+
+A future CI pipeline could support manually or automatically selecting execution dimensions such as:
+
+- Target browser
+- Locale
+- Target environment
+- Test scope
+
+For example:
+
+```text
+Environment: controlled-test
+Browser: firefox
+Locale: nl
+Scope: smoke
+```
+
+This could allow the same automation framework to support targeted validation without duplicating workflows.
+
+It was not implemented because the current project has only one available target environment, the implemented I18N coverage intentionally validates a specific English-to-Dutch journey, and production-facing execution is currently unavailable from GitHub-hosted runners.
+
+If an approved CI environment became available, these dimensions could be exposed through pipeline inputs and mapped to Playwright projects, configuration, environment variables, and test tags.
 
 ## Framework Opportunities
 

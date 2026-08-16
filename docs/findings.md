@@ -10,17 +10,17 @@ Automated accessibility scanning is performed with `@axe-core/playwright`.
 
 The landing-page baseline currently contains the following recurring high-severity axe rule IDs:
 
-| Rule ID | Impact |
-|---|---|
-| `aria-hidden-focus` | serious |
-| `aria-required-children` | critical |
-| `aria-required-parent` | critical |
-| `button-name` | critical |
-| `color-contrast` | serious |
-| `link-name` | serious |
-| `nested-interactive` | serious |
-| `scrollable-region-focusable` | serious |
-| `svg-img-alt` | serious |
+| Rule ID                       | Impact   |
+| ----------------------------- | -------- |
+| `aria-hidden-focus`           | serious  |
+| `aria-required-children`      | critical |
+| `aria-required-parent`        | critical |
+| `button-name`                 | critical |
+| `color-contrast`              | serious  |
+| `link-name`                   | serious  |
+| `nested-interactive`          | serious  |
+| `scrollable-region-focusable` | serious  |
+| `svg-img-alt`                 | serious  |
 
 Repeated exploratory and full-suite executions identified the rule IDs currently included in the landing-page baseline.
 
