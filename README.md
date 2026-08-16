@@ -21,6 +21,7 @@ The implemented coverage currently includes:
   - Lot details
 - Cross-browser smoke validation across Chromium, Firefox and WebKit
 - TypeScript validation through GitHub Actions
+- Internationalization validation for language selection and locale persistence across the critical journey
 
 Additional scenarios are prioritized according to risk, confidence gained, execution cost, maintainability and production safety.
 
@@ -54,7 +55,8 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   ├── accessibility/
 │   ├── api/
 │   ├── e2e/
-│   └── integration/
+│   ├── integration/
+│   └── i18n/
 │
 ├── docs/
 │   ├── approach.md
@@ -83,6 +85,7 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 - `docs/` contains the test strategy, investigation findings and architectural decisions.
 - `playwright.config.ts` defines the default Chromium execution.
 - `playwright.cross-browser.config.ts` defines serialized smoke execution across Chromium, Firefox and WebKit.
+- `tests/i18n/` contains internationalization and locale-persistence coverage.
 
 ## Requirements
 
@@ -329,6 +332,23 @@ Cross-browser smoke execution uses one worker because concurrent multi-browser e
 
 The same browser scenarios completed successfully when executed independently and when the cross-browser run was serialized.
 
+## Internationalization Testing
+
+The implemented internationalization scenario validates that a selected locale remains active throughout the critical search-to-lot journey.
+
+The test switches the application from English to Dutch and validates:
+
+- Locale-specific URL state
+- Stable translated application UI
+- Locale persistence after search
+- Locale persistence after opening a lot
+
+Dynamic lot content is not used as a translation oracle.
+
+Exploratory testing showed that the same `Train` query can return different result ordering and lot content depending on the active locale, so the scenario discovers the selected lot dynamically within the current language context.
+
+The I18N scenario uses a scoped 45-second timeout because repeated parallel full-suite execution showed that its additional locale transition could occasionally exceed the default 30-second budget.
+
 ## Reliability Strategy
 
 Reliability problems discovered during repeated execution are addressed as close as possible to their observed cause rather than through broad retries, arbitrary waits or global timeout increases.
@@ -407,7 +427,6 @@ Authenticated, destructive, performance and deeper backend scenarios would be mo
 
 With more time or access to a controlled internal environment, useful extensions could include:
 
-- Selected internationalization coverage
 - Deterministic visual regression coverage
 - Authenticated user journeys with dedicated test accounts
 - Controlled state-changing API scenarios

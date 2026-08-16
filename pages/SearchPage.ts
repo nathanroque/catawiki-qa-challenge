@@ -24,9 +24,7 @@ export class SearchPage {
   async searchFor(term: string): Promise<void> {
     const header = this.page.getByRole('banner');
 
-    const searchInput = header.getByRole('combobox', {
-      name: 'Search for brand, model, artist...',
-    });
+    const searchInput = header.getByRole('combobox');
 
     const searchButton = header.getByRole('button', {
       name: 'Search',
@@ -36,5 +34,27 @@ export class SearchPage {
 
     await searchInput.fill(term);
     await searchButton.click();
+  }
+  async selectLanguage(
+    currentLocale: string,
+    language: string
+  ): Promise<void> {
+    await dismissCookieConsentIfPresent(this.page);
+
+    const header = this.page.getByRole('banner');
+
+    await header
+      .getByRole('button', {
+        name: currentLocale,
+        exact: true,
+      })
+      .click();
+
+    await this.page
+      .getByRole('menuitem', {
+        name: language,
+        exact: true,
+      })
+      .click();
   }
 }

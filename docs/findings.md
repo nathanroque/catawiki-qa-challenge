@@ -67,6 +67,18 @@ Other test layers retain the normal execution model and default timeout. This
 keeps the mitigation scoped to the workload that demonstrated the additional
 execution cost rather than increasing timeouts globally.
 
+### Internationalization execution timing
+
+The language-persistence scenario completed successfully during isolated execution.
+
+During repeated parallel full-suite execution, the scenario intermittently exceeded the default 30-second Playwright timeout while still reaching valid localized application states.
+
+Because the scenario includes an additional locale transition before the search-to-lot journey, a scoped 45-second timeout was introduced.
+
+The global timeout and retry strategy were left unchanged.
+
+Three consecutive full-suite executions completed successfully after this adjustment.
+
 ### Cookie consent
 
 Fresh browser contexts may display a Usercentrics cookie-consent dialog that can intercept normal page interaction.
@@ -142,6 +154,18 @@ Accept: application/json
 allowed the endpoints to be exercised without an authenticated session or manually supplied cookies.
 
 These observations are not treated as security vulnerabilities. The endpoints were observed as part of normal public application behavior and are only used for low-impact, read-only validation.
+
+### Locale-dependent search results
+
+During internationalization testing, the `Train` search produced different result ordering and lot content under the Dutch locale compared with the English experience.
+
+This observation is not treated as a defect.
+
+It means that search-result identity and ordering should not be assumed to remain stable across locales.
+
+The internationalization scenario therefore validates locale persistence and translated application-owned UI while continuing to discover the selected lot dynamically at runtime.
+
+Lot titles, IDs, ordering, and seller-provided content are not used as cross-locale expectations.
 
 ## Potential Risks Requiring Further Validation
 

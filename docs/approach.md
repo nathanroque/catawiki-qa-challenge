@@ -343,3 +343,36 @@ playwright.cross-browser.config.ts
 This keeps normal development execution fast and predictable while providing deliberate cross-browser validation of the highest-value user journey.
 
 The single-worker constraint is scoped to cross-browser execution and does not reduce parallelism for the normal Chromium suite.
+
+## 17. Internationalization Coverage
+
+After the P0 and P1 coverage was stable, internationalization was selected as an additional P2 scenario because it introduced a new quality dimension without requiring destructive production interaction.
+
+The scenario was explored manually before automation.
+
+The English application experience was opened explicitly through `/en`, and the public language selector was used to switch the interface to Dutch.
+
+Exploration confirmed that:
+
+- the application moved to the `/nl` locale;
+- stable application-owned UI such as the search input was translated;
+- the search journey remained within the Dutch locale;
+- opening a lot preserved the Dutch locale.
+
+The automated scenario therefore uses both URL state and stable translated application UI as deterministic localization signals.
+
+Dynamic lot content is intentionally excluded from translation assertions.
+
+During exploration, the same `Train` query produced different result ordering and lot content between the English and Dutch experiences. This reinforced the existing runtime-data strategy: the test discovers the second result within the active locale rather than expecting the same lot to appear across languages.
+
+### I18N reliability
+
+The internationalization scenario completed successfully when executed independently.
+
+During repeated parallel full-suite execution, the scenario intermittently exceeded Playwright's default 30-second timeout while still progressing through valid Dutch search-result states.
+
+Because the scenario introduces an additional locale transition before the existing search-to-lot journey, its execution budget was increased locally to 45 seconds.
+
+The broader suite timeout and retry strategy were left unchanged.
+
+Three consecutive full-suite executions completed successfully after the scoped timeout adjustment.
