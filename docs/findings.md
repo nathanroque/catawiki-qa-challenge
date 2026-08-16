@@ -225,3 +225,17 @@ page context, it remains part of the known baseline.
 
 Affected-node counts varied between executions, reinforcing the decision to
 baseline accessibility debt by rule ID rather than exact node count.
+
+### Cross-browser execution concurrency
+
+The critical smoke journey was successfully executed independently in Chromium, Firefox, and WebKit.
+
+When the broader multi-project execution ran with normal local concurrency, intermittent timeouts were observed in the Firefox and WebKit smoke executions.
+
+The failures occurred at different stages, including lot navigation completion and a search interaction blocked by a late Usercentrics consent overlay.
+
+Because the same browser scenarios succeeded independently, the behavior was treated as an execution-reliability concern rather than evidence of a browser-specific functional defect.
+
+A subsequent execution using a single worker completed successfully across the full configured run.
+
+Cross-browser smoke validation is therefore executed serially through a dedicated configuration while the normal Chromium suite retains its existing parallel execution model.

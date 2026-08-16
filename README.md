@@ -15,6 +15,12 @@ The implemented coverage currently includes:
 - UI/API integration validation for the second `Train` search result
 - Direct API validation of lot navigation consistency
 - Runtime contract validation for selected API responses
+- Automated accessibility regression checks for:
+  - Landing page
+  - Search results
+  - Lot details
+- Cross-browser smoke validation across Chromium, Firefox and WebKit
+- TypeScript validation through GitHub Actions
 
 Additional scenarios are prioritized according to risk, confidence gained, execution cost, maintainability and production safety.
 
@@ -25,7 +31,9 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 - Playwright Test
 - TypeScript
 - Node.js
-- Playwright APIRequestContext
+- Playwright `APIRequestContext`
+- `@axe-core/playwright`
+- GitHub Actions
 
 ## Project Structure
 
@@ -43,19 +51,24 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   └── LotPage.ts
 │
 ├── tests/
+│   ├── accessibility/
 │   ├── api/
-│   │   └── lot-navigation.spec.ts
 │   ├── e2e/
-│   │   └── search-lot.spec.ts
 │   └── integration/
-│       └── train-search-bidding.spec.ts
 │
 ├── docs/
 │   ├── approach.md
+│   ├── findings.md
 │   ├── test-plan.md
 │   └── adr/
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
 ├── playwright.config.ts
+├── playwright.cross-browser.config.ts
+├── package.json
 └── tsconfig.json
 ```
 
@@ -64,9 +77,12 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 - `pages/` contains page-specific UI interactions and locators.
 - `api/` contains reusable HTTP interaction logic and runtime contract validators.
 - `tests/e2e/` contains user-facing end-to-end behavior.
-- `tests/api/` contains direct API scenarios.
+- `tests/api/` contains direct read-only API scenarios.
 - `tests/integration/` contains scenarios that correlate UI behavior with backend API state.
-- `docs/` contains the testing strategy, investigation notes and architectural decisions.
+- `tests/accessibility/` contains automated accessibility regression checks.
+- `docs/` contains the test strategy, investigation findings and architectural decisions.
+- `playwright.config.ts` defines the default Chromium execution.
+- `playwright.cross-browser.config.ts` defines serialized smoke execution across Chromium, Firefox and WebKit.
 
 ## Requirements
 
@@ -78,7 +94,7 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 Install project dependencies:
 
 ```bash
-npm install
+npm ci
 ```
 
 Install Playwright browsers:
@@ -90,29 +106,42 @@ npx playwright install
 ## Type Checking
 
 ```bash
-npx tsc --noEmit
+npm run typecheck
 ```
 
 ## Running Tests
 
-### Run the complete suite
+### Run the default suite
 
 ```bash
-npx playwright test
+npm test
 ```
 
-Local execution is configured to run browser-based tests in headed mode by default because Catawiki currently returns an `Access Denied` response during headless browser navigation.
+The default Playwright configuration runs the implemented suite in Chromium.
 
-Headless execution can still be enabled explicitly when needed:
+Browser-based tests run headed locally by default because headless navigation to the Catawiki production application may receive an `Access Denied` response from the production edge layer.
 
-```powershell
-$env:HEADLESS="true"
-npx playwright test
+The suite does not attempt to bypass this production restriction.
+
+### Run cross-browser smoke validation
+
+```bash
+npm run test:cross-browser
 ```
 
-The suite does not attempt to bypass production anti-automation controls.
+The cross-browser configuration reuses the critical `@smoke` journey across:
 
-### Run the critical E2E journey
+- Chromium
+- Firefox
+- WebKit
+
+Cross-browser execution uses a dedicated Playwright configuration and a single worker.
+
+During exploratory execution, each browser completed the critical journey successfully when executed independently. Concurrent multi-browser execution produced intermittent timing failures, while serialized execution completed successfully.
+
+The single-worker constraint is therefore scoped specifically to cross-browser validation rather than reducing parallelism across the default suite.
+
+### Run the critical E2E journey in Chromium
 
 ```bash
 npx playwright test tests/e2e/search-lot.spec.ts --project=chromium
@@ -130,7 +159,13 @@ npx playwright test tests/api --project=chromium
 npx playwright test tests/integration --project=chromium
 ```
 
-### Run smoke tests
+### Run accessibility tests
+
+```bash
+npx playwright test tests/accessibility --project=chromium
+```
+
+### Run smoke tests in Chromium
 
 ```bash
 npx playwright test --grep @smoke --project=chromium
@@ -142,15 +177,28 @@ npx playwright test --grep @smoke --project=chromium
 npx playwright test --grep @api --project=chromium
 ```
 
+### Explicit headless execution
+
+Headless execution can still be requested explicitly:
+
+```powershell
+$env:HEADLESS="true"
+npm test
+```
+
+The production environment may reject this execution mode with `Access Denied`. The framework intentionally does not attempt to circumvent that behavior.
+
 ## Reporting and Diagnostics
 
-The framework currently captures:
+The framework currently provides:
 
-- HTML reports
+- Playwright HTML reports
+- Named behavioral `test.step()` sections
 - Screenshots on failure
 - Video retained on failure
 - Playwright trace on first retry
 - Runtime diagnostic values where useful
+- Detailed HTTP failure information for mandatory API requests
 
 Open the latest HTML report with:
 
@@ -176,8 +224,9 @@ The project intentionally favors a smaller reliable suite over maximizing test c
 
 See:
 
-- [`docs/test-plan.md`](docs/test-plan.md) — planned, implemented and deferred coverage
+- [`docs/test-plan.md`](docs/test-plan.md) — planned, implemented, candidate and deferred coverage
 - [`docs/approach.md`](docs/approach.md) — how the solution evolved during exploration and implementation
+- [`docs/findings.md`](docs/findings.md) — notable observations discovered during testing
 - [`docs/adr/`](docs/adr/) — architectural decisions and trade-offs
 
 ## Production Safety
@@ -190,11 +239,11 @@ The suite avoids:
 
 - Bidding or purchasing
 - Production data modification
-- Favouriting/unfavouriting
+- Favouriting or unfavouriting
 - Account creation
 - Load or stress testing
-- Authentication probing
-- Undocumented endpoint guessing
+- Authentication or authorization probing
+- Arbitrary internal endpoint probing
 - Circumventing production security or anti-automation controls
 
 Read-only APIs naturally used by unauthenticated customer flows may be validated when they provide meaningful and safe coverage.
@@ -215,7 +264,7 @@ Instead, runtime values are discovered and used to validate relationships and in
 
 For example, the critical E2E scenario captures the selected search result and verifies that the corresponding lot is the one opened after navigation.
 
-The API navigation scenario discovers a current lot dynamically and validates relationships between adjacent lot responses rather than fixed identifiers.
+The API navigation scenario discovers a current lot dynamically and validates relationships between adjacent lot responses rather than relying on fixed identifiers.
 
 ## API and Contract Testing
 
@@ -223,7 +272,7 @@ Network reconnaissance identified several read-only JSON endpoints naturally con
 
 A small `CatawikiApiClient` centralizes endpoint and request configuration while keeping behavioral expectations inside the tests.
 
-Runtime schema validation is used to verify relevant API response structures.
+Runtime schema validation is used to verify the relevant API response structures.
 
 Contract checks are intentionally separated from business assertions.
 
@@ -234,17 +283,119 @@ For example:
 
 Only fields relevant to the implemented scenarios are validated to avoid unnecessary coupling to the complete backend implementation.
 
+## Accessibility Testing
+
+Automated accessibility regression checks use `@axe-core/playwright`.
+
+The implemented coverage includes:
+
+- Landing page
+- Search results
+- Lot details
+
+Initial scans identified existing high-severity axe findings in the public production application.
+
+Because this project does not control the production code, permanently failing on every existing finding would reduce the usefulness of the automation as a regression signal.
+
+The accessibility tests therefore use explicit page-specific known-issue baselines.
+
+The baseline:
+
+- Keeps existing findings visible
+- Does not classify those findings as acceptable
+- Fails when a new serious or critical axe rule appears outside the known baseline
+
+Baselines are maintained by axe violation rule ID rather than exact affected-node count because the production application contains dynamic and conditionally rendered content.
+
+Automated axe checks are treated as accessibility regression signals and do not represent complete WCAG validation or replace manual accessibility evaluation.
+
+## Cross-Browser Strategy
+
+The complete suite is intentionally not multiplied across every browser.
+
+The default Playwright configuration executes the full implemented suite using Chromium.
+
+A dedicated cross-browser configuration reuses only the highest-value `@smoke` journey across:
+
+```text
+Chromium
+Firefox
+WebKit
+```
+
+This provides browser compatibility coverage without unnecessarily multiplying API, integration, negative and accessibility scenarios across every browser.
+
+Cross-browser smoke execution uses one worker because concurrent multi-browser execution showed intermittent timing instability against the live production environment.
+
+The same browser scenarios completed successfully when executed independently and when the cross-browser run was serialized.
+
+## Reliability Strategy
+
+Reliability problems discovered during repeated execution are addressed as close as possible to their observed cause rather than through broad retries, arbitrary waits or global timeout increases.
+
+Examples include:
+
+- Accessibility scans are serialized within their own scope and use a dedicated timeout because full-page axe analysis demonstrated higher execution cost.
+- Cookie consent is handled through the visible user-facing control rather than forced clicks or hard-coded internal consent state.
+- Late Usercentrics initialization is handled again before interactions that may be blocked by the overlay.
+- Mandatory API failures include HTTP status and response information for easier diagnosis.
+- Cross-browser smoke execution uses a single worker after concurrent browser execution demonstrated intermittent timing instability.
+
+Local execution uses no automatic retries.
+
+A retry may be enabled in CI for diagnostic purposes, but retries are not treated as a substitute for investigating unreliable behavior.
+
+## CI/CD
+
+GitHub Actions currently performs deterministic repository validation:
+
+```text
+Dependency installation
+        ↓
+TypeScript type check
+```
+
+An initial GitHub-hosted workflow also attempted to execute read-only production API coverage.
+
+Repository setup, dependency installation and TypeScript validation completed successfully, but the production API request received `403 Forbidden / Access Denied` from the Catawiki production edge layer.
+
+Production-facing API and browser scenarios are therefore intentionally excluded from the current GitHub-hosted workflow.
+
+The project does not attempt to bypass this restriction through altered headers, browser spoofing, arbitrary retries or other anti-automation workarounds.
+
+With an approved execution environment that can access the production application normally, the CI strategy could expand to include:
+
+- High-value API checks
+- Critical Chromium smoke coverage
+- Negative search coverage
+- Accessibility regression reporting
+- Scheduled cross-browser smoke validation
+
 ## Known Limitations
 
 ### Headless browser execution
 
-During development, headed Chromium successfully loaded the production application while headless navigation could receive an `Access Denied` response from the production edge layer.
+During development, headed browser execution successfully loaded the production application while headless Chromium navigation could receive an `Access Denied` response from the production edge layer.
 
 The suite does not attempt to bypass this behavior.
 
+### GitHub-hosted production access
+
+Production requests from the current GitHub-hosted environment may receive `403 Forbidden / Access Denied`.
+
+For this reason, the current hosted workflow performs deterministic static validation rather than production-facing test execution.
+
+### Cross-browser concurrency
+
+The critical journey works in Chromium, Firefox and WebKit.
+
+Concurrent multi-browser execution showed intermittent timing instability against the live production application, while isolated and serialized execution completed successfully.
+
+Cross-browser smoke validation is therefore intentionally configured with a single worker.
+
 ### Dynamic production environment
 
-Results, auction state and live values can change between requests.
+Search results, auction state and live values can change between requests.
 
 Tests therefore prefer structural validation and cross-response invariants over exact-value assertions.
 
@@ -252,15 +403,15 @@ Tests therefore prefer structural validation and cross-response invariants over 
 
 Authenticated, destructive, performance and deeper backend scenarios would be more appropriate with access to a controlled staging environment and dedicated test data.
 
-## Current Direction
+## Further Opportunities
 
-The next planned areas include:
+With more time or access to a controlled internal environment, useful extensions could include:
 
-- Additional high-value negative coverage
-- Automated accessibility checks
-- Cross-browser execution
-- CI/CD workflow design
-- Failure artifact publishing
 - Selected internationalization coverage
+- Deterministic visual regression coverage
+- Authenticated user journeys with dedicated test accounts
+- Controlled state-changing API scenarios
+- Broader CI execution in an approved environment
+- Performance testing against a non-production system with explicit authorization
 
-Implementation remains intentionally proportional to the assignment and available environment.
+These areas remain intentionally secondary to the implemented P0 and P1 coverage.

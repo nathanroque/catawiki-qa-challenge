@@ -129,7 +129,7 @@ Potentially valuable under different environmental or organizational conditions,
 | A11Y-001 | Landing page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
 | A11Y-002 | Search results page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
 | A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
-| XB-001 | Critical journey runs across Chromium, Firefox and WebKit | Cross-browser | P1 | Nightly | Planned |
+| XB-001 | Critical journey runs across Chromium, Firefox and WebKit | Cross-browser | P1 | Nightly | Implemented |
 | E2E-003 | Search handles benign special characters gracefully | E2E / Edge | P2 | Nightly | Candidate |
 | I18N-001 | Selected language persists across the critical journey | Internationalization | P2 | Nightly | Candidate |
 | I18N-002 | Sampled interface text predominantly matches selected language | Internationalization | Experimental | Nightly | Candidate |
@@ -350,10 +350,11 @@ Accessibility scans currently act as reporting and regression checks rather than
 
 
 ### XB-001 — Cross-Browser Critical Journey
+
 **Layer:** Cross-browser E2E  
 **Priority:** P1  
 **CI target:** Nightly  
-**Status:** Planned
+**Status:** Implemented
 
 ```gherkin
 Scenario Outline: Critical journey works across supported browsers
@@ -373,9 +374,26 @@ Examples:
 ```
 
 #### Test strategy
-The same Playwright test implementation should be reused through Playwright project configuration rather than duplicating test code for each browser.
 
-Broader browser coverage is better suited to scheduled execution than to every local development iteration.
+The existing P0 smoke scenario is reused across Chromium, Firefox, and WebKit rather than duplicated into browser-specific test files.
+
+Cross-browser execution uses a dedicated Playwright configuration that:
+
+- selects only the `@smoke` scenario;
+- defines Chromium, Firefox, and WebKit projects;
+- uses a single worker.
+
+The default Playwright configuration remains Chromium-only so that normal suite execution does not unintentionally multiply all API, accessibility, integration, and E2E scenarios across every browser.
+
+#### Reliability observation
+
+The critical journey completed successfully when Chromium, Firefox, and WebKit were executed individually.
+
+When the broader multi-project execution was allowed to run concurrently, Firefox and WebKit experienced intermittent timeouts in different parts of the journey, including navigation completion and a late Usercentrics overlay intercepting interaction.
+
+The same configured execution completed successfully with a single worker.
+
+Cross-browser smoke execution is therefore intentionally serialized rather than relying on higher global timeouts or retries to mask concurrency-related instability against the production environment.
 
 
 ## 8. P2 / Stretch Coverage
@@ -1045,9 +1063,10 @@ The current GitHub-hosted pipeline therefore provides deterministic static valid
 
 
 ## 21. Cross-Browser Strategy
-Cross-browser support should be implemented through Playwright projects rather than duplicated tests.
 
-The target browser matrix is:
+Cross-browser coverage is implemented through Playwright projects while reusing the existing critical smoke scenario.
+
+The supported validation matrix is:
 
 ```text
 Chromium
@@ -1055,23 +1074,31 @@ Firefox
 WebKit
 ```
 
-The critical smoke journey should be the first candidate for cross-browser execution.
+The default Playwright configuration remains Chromium-only and is used for normal suite execution.
 
-Not every browser needs to execute every test during every CI event.
+A dedicated cross-browser configuration runs only the `@smoke` scenario across all three browser engines with a single worker.
 
-A possible strategy is:
+This results in two distinct execution modes:
 
 ```text
-Pull Request
+Default suite
 └── Chromium
+    └── Full implemented suite
+```
 
-Nightly
+```text
+Cross-browser validation
 ├── Chromium
 ├── Firefox
 └── WebKit
+    └── Critical @smoke journey only
 ```
 
-This provides broader compatibility coverage without unnecessarily increasing feedback time for every code change.
+The separation avoids multiplying API, integration, negative, and accessibility scenarios across browsers when those tests do not provide equivalent browser-compatibility value.
+
+Single-worker execution is deliberate. Concurrent multi-browser execution against the production application produced intermittent timeouts, while isolated browser runs and the serialized cross-browser execution completed successfully.
+
+With an approved production-facing CI environment, the cross-browser smoke configuration would be a suitable candidate for scheduled execution.
 
 
 ## 22. Test Tags

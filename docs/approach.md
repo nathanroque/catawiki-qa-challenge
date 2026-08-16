@@ -309,3 +309,37 @@ Rather than attempting to make the GitHub-hosted runner resemble a normal custom
 The resulting CI pipeline keeps deterministic static validation automated while acknowledging that production-facing scenarios require an execution environment accepted by the Catawiki production edge layer.
 
 Before introducing the hosted CI workflow, repeated local execution after the reliability changes produced three consecutive successful full-suite runs.
+
+## 16. Cross-Browser Validation Strategy
+
+With the P1 functional, API, integration, and accessibility coverage stable, the critical smoke journey was evaluated across the three browser engines supported by Playwright: Chromium, Firefox, and WebKit.
+
+The existing P0 scenario was reused rather than creating browser-specific copies of the same test.
+
+Initial isolated execution confirmed that the journey could complete successfully in all three browsers.
+
+The first combined configuration added Firefox and WebKit as additional Playwright projects while retaining the normal parallel execution model. During full-suite execution, the Firefox and WebKit smoke scenarios experienced intermittent timeouts in different stages of the journey.
+
+One failure occurred while waiting for lot navigation to complete. Another occurred when a late Usercentrics consent overlay intercepted the search interaction.
+
+Because all three browsers had already succeeded independently, the next experiment reduced cross-browser concurrency rather than increasing global timeouts or introducing retries.
+
+Running the configured suite with a single worker completed successfully across all nine resulting executions.
+
+The final design therefore separates normal and cross-browser execution:
+
+```text
+playwright.config.ts
+└── Chromium-only default suite
+
+playwright.cross-browser.config.ts
+└── @smoke only
+    ├── Chromium
+    ├── Firefox
+    └── WebKit
+        └── single worker
+```
+
+This keeps normal development execution fast and predictable while providing deliberate cross-browser validation of the highest-value user journey.
+
+The single-worker constraint is scoped to cross-browser execution and does not reduce parallelism for the normal Chromium suite.
