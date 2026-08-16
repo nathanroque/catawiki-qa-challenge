@@ -124,23 +124,23 @@ Potentially valuable under different environmental or organizational conditions,
 
 ## 5. Coverage Overview
 
-| ID       | Scenario                                                                           | Layer                         | Priority     | Status      | Intended CI Target |
-| -------- | ---------------------------------------------------------------------------------- | ----------------------------- | ------------ | ----------- | ------------------ |
-| E2E-001  | Search `Train` → open second lot → validate lot details and identity               | E2E / Smoke                   | P0           | Implemented | PR                 |
-| E2E-002  | Nonsense search → no exact results message + related-object fallback               | E2E / Negative                | P1           | Implemented | PR                 |
-| API-001  | Second Train search lot has consistent bidding API state                           | UI/API Integration + Contract | P1           | Implemented | PR                 |
-| API-002  | Lot navigation remains internally consistent                                       | API + Contract                | P1           | Implemented | PR                 |
-| UNIT-001 | Bidding-state runtime schema validator accepts and rejects representative payloads | Unit / Schema                 | P1           | Implemented | PR                 |
+| ID       | Scenario                                                                            | Layer                         | Priority     | Status      | Intended CI Target |
+| -------- | ----------------------------------------------------------------------------------- | ----------------------------- | ------------ | ----------- | ------------------ |
+| E2E-001  | Search `Train` → open second lot → validate lot details and identity                | E2E / Smoke                   | P0           | Implemented | PR                 |
+| E2E-002  | Nonsense search → no exact results message + related-object fallback                | E2E / Negative                | P1           | Implemented | PR                 |
+| API-001  | Second Train search lot has consistent bidding API state                            | UI/API Integration + Contract | P1           | Implemented | PR                 |
+| API-002  | Lot navigation remains internally consistent                                        | API + Contract                | P1           | Implemented | PR                 |
+| UNIT-001 | Bidding-state runtime schema validator accepts and rejects representative payloads  | Unit / Schema                 | P1           | Implemented | PR                 |
 | UNIT-002 | Lot-navigation runtime schema validator accepts and rejects representative payloads | Unit / Schema                 | P1           | Implemented | PR                 |
-| A11Y-001 | Landing page has no unexpected serious or critical accessibility violations        | Accessibility                 | P1           | Implemented | Scheduled / Report |
-| A11Y-002 | Search results page has no unexpected serious or critical accessibility violations | Accessibility                 | P1           | Implemented | Scheduled / Report |
-| A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations    | Accessibility                 | P1           | Implemented | Scheduled / Report |
-| XB-001   | Critical journey runs across Chromium, Firefox and WebKit                          | Cross-browser                 | P1           | Implemented | Nightly            |
-| E2E-003  | Search handles benign special characters gracefully                                | E2E / Edge                    | P2           | Candidate   | Nightly            |
+| A11Y-001 | Landing page has no unexpected serious or critical accessibility violations         | Accessibility                 | P1           | Implemented | Scheduled / Report |
+| A11Y-002 | Search results page has no unexpected serious or critical accessibility violations  | Accessibility                 | P1           | Implemented | Scheduled / Report |
+| A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations     | Accessibility                 | P1           | Implemented | Scheduled / Report |
+| XB-001   | Critical journey runs across Chromium, Firefox and WebKit                           | Cross-browser                 | P1           | Implemented | Nightly            |
+| E2E-003  | Search handles benign special characters gracefully                                 | E2E / Edge                    | P2           | Candidate   | Nightly            |
 | E2E-004  | Search result view preference persists between gallery and normal modes             | E2E / Preference              | P2           | Candidate   | Nightly            |
-| I18N-001 | Selected language persists across the critical journey                             | Internationalization          | P2           | Implemented | Nightly            |
-| I18N-002 | Sampled interface text predominantly matches selected language                     | Internationalization          | Experimental | Candidate   | Nightly            |
-| VIS-001  | Stable UI region matches approved visual baseline                                  | Visual                        | P2           | Candidate   | Nightly            |
+| I18N-001 | Selected language persists across the critical journey                              | Internationalization          | P2           | Implemented | Nightly            |
+| I18N-002 | Sampled interface text predominantly matches selected language                      | Internationalization          | Experimental | Candidate   | Nightly            |
+| VIS-001  | Stable UI region matches approved visual baseline                                   | Visual                        | P2           | Candidate   | Nightly            |
 
 ## 6. P0 Coverage
 
