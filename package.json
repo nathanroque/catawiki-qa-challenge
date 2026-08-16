@@ -6,7 +6,9 @@
   "scripts": {
     "test": "playwright test",
     "test:cross-browser": "playwright test --config=playwright.cross-browser.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report",
+    "report:cross-browser": "playwright show-report playwright-report-cross-browser"
   },
   "repository": {
     "type": "git",

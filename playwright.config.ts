@@ -11,7 +11,10 @@ export default defineConfig({
 
   workers: process.env.CI ? 1 : undefined,
 
-  reporter: 'html',
+  reporter: [
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+  ],
 
   use: {
     baseURL: 'https://www.catawiki.com/en',

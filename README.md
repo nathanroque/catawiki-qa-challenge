@@ -193,23 +193,30 @@ The production environment may reject this execution mode with `Access Denied`. 
 
 ## Reporting and Diagnostics
 
-The framework currently provides:
+The default test suite generates:
 
-- Playwright HTML reports
-- Named behavioral `test.step()` sections
-- Screenshots on failure
-- Video retained on failure
-- Playwright trace on first retry
-- Runtime diagnostic values where useful
-- Detailed HTTP failure information for mandatory API requests
+- HTML report: `playwright-report/`
+- JUnit report: `test-results/junit.xml`
 
-Open the latest HTML report with:
+Cross-browser execution generates separate reports:
+
+- HTML report: `playwright-report-cross-browser/`
+- JUnit report: `test-results/cross-browser-junit.xml`
+
+To open the reports locally:
 
 ```bash
-npx playwright show-report
+npm run report
+npm run report:cross-browser
 ```
 
-The goal is for failures to provide enough information to begin investigation without immediately reproducing them locally.
+The framework also captures:
+
+- Screenshots on failure
+- Video retained on failure
+- Trace collection on retry
+- Named test steps
+- Runtime diagnostic values where useful
 
 ## Testing Strategy
 
