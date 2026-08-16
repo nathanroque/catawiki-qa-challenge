@@ -8,6 +8,22 @@ export default defineConfig({
 
   grep: /@smoke/,
 
+  reporter: [
+    [
+      'html',
+      {
+        outputFolder: 'playwright-report-cross-browser',
+        open: 'never',
+      },
+    ],
+    [
+      'junit',
+      {
+        outputFile: 'test-results/cross-browser-junit.xml',
+      },
+    ],
+  ],
+
   projects: [
     {
       name: 'chromium',
