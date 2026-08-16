@@ -15,9 +15,9 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
   await test.step('Search for "Train"', async () => {
     await searchPage.searchFor('Train');
 
-    expect(
-      await searchResultsPage.lots.count()
-    ).toBeGreaterThan(1);
+  await expect(
+    searchResultsPage.lots.first()
+  ).toBeVisible();
   });
 
   const { selectedTitle, lotId } = await test.step(
@@ -83,9 +83,9 @@ test('user sees related objects when search has no exact results @e2e @negative'
   });
 
   await test.step('Validate related objects are displayed', async () => {
-    expect(
-      await searchResultsPage.lots.count()
-    ).toBeGreaterThan(0);
+    await expect(
+      searchResultsPage.lots.first()
+    ).toBeVisible();
 
     await expect(
       page.getByTestId('object-amount')

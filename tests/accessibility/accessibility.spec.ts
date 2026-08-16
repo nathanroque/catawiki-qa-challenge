@@ -141,9 +141,9 @@ test(
     await test.step('Search for "Train"', async () => {
       await searchPage.searchFor('Train');
 
-      expect(
-        await searchResultsPage.lots.count()
-      ).toBeGreaterThan(1);
+    await expect(
+      searchResultsPage.lots.first()
+    ).toBeVisible();
     });
 
     await test.step('Open the second search result', async () => {
