@@ -131,7 +131,7 @@ Potentially valuable under different environmental or organizational conditions,
 | A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations | Accessibility | P1 | Scheduled / Report | Implemented |
 | XB-001 | Critical journey runs across Chromium, Firefox and WebKit | Cross-browser | P1 | Nightly | Implemented |
 | E2E-003 | Search handles benign special characters gracefully | E2E / Edge | P2 | Nightly | Candidate |
-| I18N-001 | Selected language persists across the critical journey | Internationalization | P2 | Nightly | Candidate |
+| I18N-001 | Selected language persists across the critical journey | Internationalization | P2 | Nightly | Implemented |
 | I18N-002 | Sampled interface text predominantly matches selected language | Internationalization | Experimental | Nightly | Candidate |
 | VIS-001 | Stable UI region matches approved visual baseline | Visual | P2 | Nightly | Candidate |
 
@@ -420,38 +420,54 @@ It should remain limited to normal user input and should not evolve into fuzzing
 
 ## 9. Internationalization Coverage
 ### I18N-001 — Language Selection and Persistence
+
 **Layer:** Internationalization / E2E  
 **Priority:** P2  
 **CI target:** Nightly  
-**Status:** Candidate
+**Status:** Implemented
 
 ```gherkin
 Scenario: Selected language persists throughout the critical journey
 
   Given I am using the English Catawiki experience
-  When I change the interface to another supported language
-  Then the selected locale should become active
-  And stable interface elements should use the selected language
+  When I change the interface language to Dutch
+  Then the Dutch locale should become active
+  And stable application UI should be displayed in Dutch
 
-  When I perform a search
-  And I open the second lot from the results
-  Then the selected locale should remain active
-  And stable interface elements should continue to use the selected language
+  When I search for "Train"
+  Then the search results should remain in the Dutch locale
+
+  When I open the second lot from the results
+  Then the lot page should remain in the Dutch locale
+  And the selected language should remain active
 ```
 
 #### Test strategy
-The primary assertions should remain deterministic.
 
-The test can validate:
+The scenario starts from the explicit English `/en` experience and changes the application language to Dutch through the public language selector.
 
-- Locale state
-- Locale-specific URL behavior where applicable
-- Known stable navigation text
-- Known stable interface labels
-- Persistence of the selected language after navigation
+Locale persistence is validated using deterministic application-owned signals:
 
-The test should avoid using lot titles, seller-provided content or other user-generated data as translation assertions.
+- Locale-specific URL state
+- The translated search input accessible name
+- The active locale shown in the language selector
+- Persistence of `/nl` through search and lot navigation
 
+Lot titles, IDs, seller-provided content, and other dynamic auction data are not used as translation expectations.
+
+During exploratory execution, the `Train` search produced different result ordering and lot content between the English and Dutch locales.
+
+The scenario therefore does not compare search-result identity or ordering across locales. The second result is discovered dynamically within the active locale and is used only to continue the journey.
+
+#### Reliability
+
+The scenario performs an additional locale transition before the search-to-lot journey and intermittently exceeded Playwright's default 30-second test timeout during parallel full-suite execution.
+
+The timeout is therefore scoped to this scenario at 45 seconds.
+
+No global timeout increase or additional retry behavior was introduced.
+
+After the scoped timeout adjustment, three consecutive full-suite executions completed successfully.
 
 ### I18N-002 — Language Recognition Heuristic
 **Layer:** Internationalization  
@@ -871,6 +887,18 @@ full-page accessibility analysis.
 The timeout adjustment is scoped to accessibility tests rather than applied
 globally because unrelated scenarios have not demonstrated a general need for
 a longer execution budget.
+
+### Internationalization execution budget
+
+The language-persistence scenario performs an additional locale transition before executing the search-to-lot journey.
+
+Repeated full-suite execution showed that the scenario could intermittently exceed the default 30-second timeout while still progressing through valid localized application states.
+
+The I18N scenario therefore uses a scoped 45-second timeout.
+
+The adjustment remains local to the scenario because the rest of the suite has not demonstrated a general need for a larger execution budget.
+
+Retries and global timeout increases were intentionally avoided.
 
 ## 17. Execution Timing and Performance Considerations
 Performance is an important quality characteristic, but the current environment is not suitable for meaningful performance testing.
