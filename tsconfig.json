@@ -5,13 +5,18 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "esModuleInterop": true,
-    "types": ["node", "@playwright/test"],
+    "types": [
+      "node",
+      "@playwright/test"
+    ],
     "skipLibCheck": true,
     "noEmit": true
   },
   "include": [
     "tests/**/*.ts",
     "pages/**/*.ts",
+    "api/**/*.ts",
+    "support/**/*.ts",
     "playwright.config.ts",
     "playwright.cross-browser.config.ts"
   ],

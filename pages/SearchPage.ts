@@ -5,7 +5,7 @@ import { dismissCookieConsentIfPresent } from '../support/cookie-consent';
  * Encapsulates interactions available from the Catawiki landing page.
  */
 export class SearchPage {
-  constructor(private readonly page: Page) {}
+  constructor(private readonly page: Page) { }
 
   /**
    * Opens the English Catawiki landing page and prepares it for interaction.

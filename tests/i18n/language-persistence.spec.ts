@@ -38,13 +38,16 @@ test('selected language persists through the critical journey @i18n @e2e', async
     ).toBeVisible();
   });
 
-    await test.step('Search for Train using the Dutch experience', async () => {
-    await searchPage.searchFor('Train');
+  await test.step('Open the second lot and preserve the Dutch locale', async () => {
+    await searchResultsPage.openLot(1);
 
-    await expect(page).toHaveURL(/\/nl\/s\?/);
+    await expect(page).toHaveURL(/\/nl\/l\//);
 
     await expect(
-        searchResultsPage.getLot(1)
+      page.getByRole('button', {
+        name: 'nl',
+        exact: true,
+      })
     ).toBeVisible();
-    });
+  });
 });

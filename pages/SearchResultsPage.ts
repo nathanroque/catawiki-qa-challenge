@@ -4,7 +4,7 @@ import { Page } from '@playwright/test';
  * Encapsulates read-only interactions with the Catawiki search results page.
  */
 export class SearchResultsPage {
-  constructor(private readonly page: Page) {}
+  constructor(private readonly page: Page) { }
 
   /**
    * Locator representing the lot cards currently rendered in the result list.

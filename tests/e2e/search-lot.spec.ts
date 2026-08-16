@@ -15,9 +15,11 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
   await test.step('Search for "Train"', async () => {
     await searchPage.searchFor('Train');
 
-  await expect(
-    searchResultsPage.lots.first()
-  ).toBeVisible();
+    await expect(page).toHaveURL(/\/en\/s\?.*q=Train/);
+
+    await expect(
+      searchResultsPage.lots.first()
+    ).toBeVisible();
   });
 
   const { selectedTitle, lotId } = await test.step(

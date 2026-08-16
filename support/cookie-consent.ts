@@ -23,7 +23,7 @@ export async function dismissCookieConsentIfPresent(
       state: 'visible',
       timeout: 3000,
     })
-    .catch(() => {});
+    .catch(() => { });
 
   if (await continueWithoutAccepting.isVisible()) {
     await continueWithoutAccepting.click();
