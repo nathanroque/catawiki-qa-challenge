@@ -49,20 +49,29 @@ During implementation, we observed that search results can differ between locale
 
 ### Search result view preference persistence
 
-Manual exploration identified both gallery and normal search-result views through the `view-mode-gallery` and `view-mode-normal` controls.
+Exploratory automation identified both gallery and normal search-result views through the `view-mode-gallery` and `view-mode-normal` controls.
 
-The selected mode appeared to persist across navigation and later visits, which makes this a meaningful future preference-persistence scenario rather than a cosmetic variation of the existing search test.
+The investigation also exposed a useful framework risk. Both layouts retain the stable `lot-card-container-*` result container, but they render the lot title through different internal structures:
+
+```text
+gallery → .c-lot-card__title
+normal  → .c-extended-lot-card__title
+```
+
+The original `SearchResultsPage.getLotTitle()` implementation was coupled to the gallery representation and timed out when the same second-result flow was exercised in normal view.
+
+The Page Object was hardened so that title retrieval works with either supported representation. The experimental scenario was then rerun successfully and confirmed that the second `Train` result could still be identified and opened in normal view.
+
+The same exploration also confirmed that normal view remained active after:
+
+- Opening the selected lot and returning to the search results
+- Reloading the search-results page
 
 The persistence mechanism was not established and should not be assumed to be cookies, local storage or any other specific client-side implementation.
 
-Future coverage could validate:
+Broader permanent coverage could later validate additional persistence boundaries and both presentation modes as part of a deliberate preference-compatibility matrix.
 
-- Switching between gallery and normal views
-- Persistence after search-result navigation and return
-- Persistence after a reload or another explicitly defined persistence boundary
-- Compatibility of the existing result-selection behavior with both presentation modes
-
-This remains deferred because the current submission prioritizes higher-risk reliability and integration work, and the existing tests do not currently depend on a persisted non-default view.
+This remains a future opportunity rather than a reason to multiply the current suite. The current work keeps the Page Object layout-tolerant and records the experimentally verified behavior, while broader preference-state regression coverage remains lower priority than the implemented P0 and P1 risks.
 
 ### Additional edge and negative coverage
 

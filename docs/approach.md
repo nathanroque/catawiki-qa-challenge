@@ -389,3 +389,49 @@ Because the scenario introduces an additional locale transition before the exist
 The broader suite timeout and retry strategy were left unchanged.
 
 Three consecutive full-suite executions completed successfully after the scoped timeout adjustment.
+
+## 18. Search Result View-Mode Exploration
+
+A later exploratory pass examined the two search-result presentation modes exposed by the application:
+
+```text
+view-mode-gallery
+view-mode-normal
+```
+
+Playwright Codegen was used to exercise the mode controls and inspect the generated interaction path, while the DOM was compared directly in both states.
+
+The exploration showed that both presentations preserve the same stable result-container contract:
+
+```text
+data-testid="lot-card-container-{lotId}"
+```
+
+However, the internal title markup changes between layouts:
+
+```text
+gallery → .c-lot-card__title
+normal  → .c-extended-lot-card__title
+```
+
+This exposed a real coupling in `SearchResultsPage.getLotTitle()`. The existing implementation only targeted the gallery title selector. When an experimental E2E scenario switched the `Train` results to normal view and attempted to inspect the second lot, the test timed out waiting for `.c-lot-card__title`.
+
+Rather than creating separate Page Object methods for each presentation, title retrieval was hardened to support both known title representations while preserving the existing stable lot-container abstraction.
+
+The experimental scenario then completed successfully in normal view, including:
+
+- locating the second result;
+- retrieving its runtime title;
+- extracting its lot ID;
+- opening the same lot and validating the resulting URL.
+
+The same scenario was extended to return to the search results and reload the page. Normal view remained active across both boundaries.
+
+The active-state control itself currently exposes the selected mode through a generated CSS-module class rather than an accessibility state such as `aria-pressed` or `aria-selected`. The exploration therefore validated the active presentation through the rendered result structure instead of making the generated class name a permanent test oracle.
+
+The storage mechanism behind the persisted preference was not investigated further. The observed behavior is documented without assuming whether the state is backed by cookies, local storage, or another implementation detail.
+
+This exploration produced two useful outcomes without expanding the permanent suite unnecessarily:
+
+1. the Page Object became tolerant of both currently observed result representations;
+2. broader search-view preference regression coverage gained concrete evidence and remains documented as a future opportunity rather than being added only to increase test count.
