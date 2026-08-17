@@ -73,6 +73,59 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
   });
 });
 
+test('second Train result remains usable in normal view @e2e @view-mode', async ({
+  page,
+}) => {
+  const searchPage = new SearchPage(page);
+  const searchResultsPage = new SearchResultsPage(page);
+
+  await test.step('Open Catawiki and search for Train', async () => {
+    await searchPage.goto();
+    await searchPage.searchFor('Train');
+
+    await expect(page).toHaveURL(/\/en\/s\?q=Train/);
+    await expect(searchResultsPage.getLot(1)).toBeVisible();
+  });
+
+  await test.step('Switch search results to normal view', async () => {
+    await page.getByTestId('view-mode-normal').click();
+  });
+
+  await test.step('Inspect the second lot in normal view', async () => {
+    const title = await searchResultsPage.getLotTitle(1);
+    const lotId = await searchResultsPage.getLotId(1);
+
+    console.log({
+      title,
+      lotId,
+    });
+
+    expect(title).toBeTruthy();
+    expect(lotId).toBeTruthy();
+  });
+
+  await test.step('Open the second lot from normal view', async () => {
+    const lotId = await searchResultsPage.getLotId(1);
+
+    await searchResultsPage.openLot(1);
+
+    await expect(page).toHaveURL(new RegExp(`/l/${lotId}`));
+    await page.goBack();
+
+    await expect(page).toHaveURL(/\/en\/s\?q=Train/);
+
+    await expect(
+      searchResultsPage.getLot(1).locator('.c-extended-lot-card__title'),
+    ).toBeVisible();
+
+    await page.reload();
+
+    await expect(
+      searchResultsPage.getLot(1).locator('.c-extended-lot-card__title'),
+    ).toBeVisible();
+  });
+});
+
 test('user sees related objects when search has no exact results @e2e @negative', async ({
   page,
 }) => {

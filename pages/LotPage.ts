@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 
 type BidStatus = {
   label: 'Current bid' | 'Starting bid';
@@ -43,24 +43,37 @@ export class LotPage {
   }
 
   /**
-   * Retrieves the bidding state currently displayed on the lot page.
+   * Retrieves the bidding state currently visible on the lot page.
    *
-   * The bid section may represent either an active current bid
+   * Responsive layouts may render more than one bid status representation
+   * in the DOM at the same time. The method selects the visible status and
+   * reads the amount associated with that representation.
+   *
+   * The bid state may represent either an active current bid
    * or a starting bid when no bids have been placed yet.
    *
-   * @returns The displayed bid status label and its associated amount.
-   * @throws If the bid status is unsupported or the associated amount cannot be found.
+   * @returns The visible bid status label and its associated amount.
+   * @throws If no supported visible bid status or associated amount can be found.
    */
   async getBidStatus(): Promise<BidStatus> {
-    const bidSection = this.page.getByTestId('lot-bid-status-section');
-
-    const statusLabel = bidSection.getByText(/^(Current bid|Starting bid)$/, {
+    const statusLabels = this.page.getByText(/^(Current bid|Starting bid)$/, {
       exact: true,
     });
 
-    await statusLabel.waitFor({
-      state: 'visible',
-    });
+    let statusLabel: Locator | undefined;
+
+    for (let index = 0; index < (await statusLabels.count()); index++) {
+      const candidate = statusLabels.nth(index);
+
+      if (await candidate.isVisible()) {
+        statusLabel = candidate;
+        break;
+      }
+    }
+
+    if (!statusLabel) {
+      throw new Error('No visible current or starting bid status was found');
+    }
 
     const label = (await statusLabel.textContent())?.trim();
 
@@ -68,9 +81,7 @@ export class LotPage {
       throw new Error(`Unexpected bid status: ${label ?? 'missing'}`);
     }
 
-    const amountLocator = statusLabel.locator(
-      'xpath=following-sibling::div[1]',
-    );
+    const amountLocator = statusLabel.locator('xpath=following-sibling::*[1]');
 
     await amountLocator.waitFor({
       state: 'visible',

@@ -389,3 +389,85 @@ Because the scenario introduces an additional locale transition before the exist
 The broader suite timeout and retry strategy were left unchanged.
 
 Three consecutive full-suite executions completed successfully after the scoped timeout adjustment.
+
+## 18. Search Result View-Mode Exploration
+
+A later exploratory pass examined the two search-result presentation modes exposed by the application:
+
+```text
+view-mode-gallery
+view-mode-normal
+```
+
+Playwright Codegen was used to exercise the mode controls and inspect the generated interaction path, while the DOM was compared directly in both states.
+
+The exploration showed that both presentations preserve the same stable result-container contract:
+
+```text
+data-testid="lot-card-container-{lotId}"
+```
+
+However, the internal title markup changes between layouts:
+
+```text
+gallery → .c-lot-card__title
+normal  → .c-extended-lot-card__title
+```
+
+This exposed a real coupling in `SearchResultsPage.getLotTitle()`. The existing implementation only targeted the gallery title selector. When an exploratory E2E scenario switched the `Train` results to normal view and attempted to inspect the second lot, the test timed out waiting for `.c-lot-card__title`.
+
+Rather than creating separate Page Object methods for each presentation, title retrieval was hardened to support both known title representations while preserving the existing stable lot-container abstraction.
+
+The scenario then completed successfully in normal view, including:
+
+- locating the second result;
+- retrieving its runtime title;
+- extracting its lot ID;
+- opening the same lot and validating the resulting URL.
+
+The same scenario was extended to return to the search results and reload the page. Normal view remained active across both boundaries.
+
+The active-state control itself currently exposes the selected mode through a generated CSS-module class rather than an accessibility state such as `aria-pressed` or `aria-selected`. The exploration therefore validated the active presentation through the rendered result structure instead of making the generated class name a permanent test oracle.
+
+The storage mechanism behind the persisted preference was not investigated further. The observed behavior is documented without assuming whether the state is backed by cookies, local storage, or another implementation detail.
+
+This exploration produced a concrete framework improvement and a focused P2 regression scenario. The test was promoted into the maintained suite because it exercises a distinct presentation-state risk and had already exposed a real Page Object coupling.
+
+Broader preference matrices remain deferred; the maintained scenario covers only the observed normal-view path and persistence boundaries that provided useful signal.
+
+## 19. Representative Mobile Validation
+
+Responsive behavior was sampled with Playwright's `iPhone 13` device profile rather than by resizing the desktop viewport.
+
+The first mobile execution exposed a real interaction difference in the application header: the desktop search combobox is directly available, while the mobile layout requires opening the mobile search control before the input becomes visible. `SearchPage.searchFor()` was hardened to handle this responsive state while preserving the same public Page Object method for both layouts.
+
+Extending the mobile scenario to retrieve the same lot information as the P0 desktop journey exposed a second difference. The bid state is rendered through responsive structures that may coexist in the DOM. A global text locator therefore became ambiguous on desktop after the initial mobile hardening.
+
+`LotPage.getBidStatus()` was refined to resolve the visible supported bid label and read the amount associated with that visible representation. This avoids separate desktop and mobile methods and keeps the abstraction aligned with what the user can actually see.
+
+The representative mobile scenario now validates the same core runtime information as the desktop journey:
+
+- selected lot identity;
+- lot title;
+- favourite count;
+- current bid.
+
+Both the desktop smoke scenario and the mobile scenario were rerun after the Page Object changes and passed. The mobile scenario was then included in the complete Chromium suite and passed as part of the 19-test run.
+
+This remains selective responsive coverage, not a claim of full device compatibility. Broader mobile and tablet matrices remain future work.
+
+## 20. Controlled Default Parallelism
+
+The default configuration originally used `fullyParallel: true` with no explicit local worker cap. That behavior was reconsidered because the complete suite targets a live production environment and should not generate machine-dependent concurrency.
+
+The default Chromium execution is now intentionally bounded:
+
+```text
+fullyParallel: false
+local workers: 2
+CI workers: 1
+```
+
+Two local workers preserve useful execution speed while keeping production traffic modest and predictable. The dedicated cross-browser configuration remains serialized with one worker because that execution mode previously demonstrated concurrency-related instability.
+
+The complete default suite was validated after this change: 19 tests passed with two workers in approximately 1.2 minutes. This provides evidence for the selected limit rather than treating the worker count as an arbitrary configuration preference.

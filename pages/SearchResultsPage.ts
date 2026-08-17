@@ -29,7 +29,11 @@ export class SearchResultsPage {
    * @returns Lot title, or null when no text content is available.
    */
   async getLotTitle(index: number): Promise<string | null> {
-    return this.getLot(index).locator('.c-lot-card__title').textContent();
+    const lot = this.getLot(index);
+
+    return lot
+      .locator('.c-lot-card__title, .c-extended-lot-card__title')
+      .textContent();
   }
 
   /**

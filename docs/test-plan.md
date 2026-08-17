@@ -137,10 +137,13 @@ Potentially valuable under different environmental or organizational conditions,
 | A11Y-003 | Lot details page has no unexpected serious or critical accessibility violations     | Accessibility                 | P1           | Implemented | Scheduled / Report |
 | XB-001   | Critical journey runs across Chromium, Firefox and WebKit                           | Cross-browser                 | P1           | Implemented | Nightly            |
 | E2E-003  | Search handles benign special characters gracefully                                 | E2E / Edge                    | P2           | Candidate   | Nightly            |
-| E2E-004  | Search result view preference persists between gallery and normal modes             | E2E / Preference              | P2           | Candidate   | Nightly            |
+| E2E-004  | Second search result remains usable and view preference persists in normal mode     | E2E / Preference              | P2           | Implemented | Nightly            |
+| MOB-001  | Critical Train journey remains usable on a representative mobile device             | E2E / Responsive              | P2           | Implemented | Nightly            |
 | I18N-001 | Selected language persists across the critical journey                              | Internationalization          | P2           | Implemented | Nightly            |
 | I18N-002 | Sampled interface text predominantly matches selected language                      | Internationalization          | Experimental | Candidate   | Nightly            |
 | VIS-001  | Stable UI region matches approved visual baseline                                   | Visual                        | P2           | Candidate   | Nightly            |
+
+The CI targets above describe the intended execution stage when an approved production-facing environment is available. The current GitHub-hosted workflow runs deterministic quality checks and Playwright test discovery only, because direct production access from the hosted runner is blocked by the Catawiki edge layer.
 
 ## 6. P0 Coverage
 
@@ -148,7 +151,7 @@ Potentially valuable under different environmental or organizational conditions,
 
 **Layer:** E2E / Smoke  
 **Priority:** P0  
-**CI target:** Pull Request  
+**Intended CI target:** Pull Request  
 **Status:** Implemented
 
 ```gherkin
@@ -205,7 +208,7 @@ These values are informational output rather than fixed expected data.
 
 **Layer:** E2E / Negative  
 **Priority:** P1  
-**CI target:** Pull Request  
+**Intended CI target:** Pull Request  
 **Status:** Implemented
 
 ```gherkin
@@ -232,7 +235,7 @@ The test does not assert the exact number of related objects because that value 
 
 **Layer:** Accessibility  
 **Priority:** P1  
-**CI target:** Scheduled / Report  
+**Intended CI target:** Scheduled / Report  
 **Status:** Implemented
 
 ```gherkin
@@ -275,7 +278,7 @@ Automated axe findings are quality signals and should not be treated as proof of
 
 **Layer:** Accessibility  
 **Priority:** P1  
-**CI target:** Scheduled / Report  
+**Intended CI target:** Scheduled / Report  
 **Status:** Implemented
 
 ```gherkin
@@ -314,7 +317,7 @@ context rather than rules that must appear in every execution.
 
 **Layer:** Accessibility  
 **Priority:** P1  
-**CI target:** Scheduled / Report  
+**Intended CI target:** Scheduled / Report  
 **Status:** Implemented
 
 ```gherkin
@@ -364,7 +367,7 @@ Accessibility scans currently act as reporting and regression checks rather than
 
 **Layer:** Cross-browser E2E  
 **Priority:** P1  
-**CI target:** Nightly  
+**Intended CI target:** Nightly  
 **Status:** Implemented
 
 ```gherkin
@@ -412,7 +415,7 @@ Cross-browser smoke execution is therefore intentionally serialized rather than 
 
 **Layer:** E2E / Edge  
 **Priority:** P2  
-**CI target:** Nightly  
+**Intended CI target:** Nightly  
 **Status:** Candidate
 
 ```gherkin
@@ -430,13 +433,79 @@ This scenario provides a lightweight robustness check around search input handli
 
 It should remain limited to normal user input and should not evolve into fuzzing, injection testing or security probing against production.
 
+### E2E-004 — Alternate Search Result View
+
+**Layer:** E2E / Preference  
+**Priority:** P2  
+**Intended CI target:** Nightly  
+**Status:** Implemented
+
+```gherkin
+Scenario: Second Train result remains usable in normal view
+
+  Given I have searched for "Train"
+  When I switch the search results from gallery view to normal view
+  Then the second result should remain identifiable and usable
+
+  When I open the second lot and return to the search results
+  Then normal view should remain active
+
+  When I reload the search results
+  Then normal view should remain active
+```
+
+#### Test intent
+
+This scenario covers a distinct presentation-state risk without multiplying the critical journey across every available preference.
+
+Exploration showed that gallery and normal modes preserve the same stable lot-container contract while rendering the title through different internal markup. The initial Page Object was coupled to the gallery representation and failed when the same result was inspected in normal view.
+
+`SearchResultsPage` was hardened to support both observed title representations while keeping result identity anchored to the stable `lot-card-container-*` contract.
+
+The scenario validates persistence behavior through navigation back to the result page and through a reload. It deliberately avoids asserting the generated active CSS-module class; the selected mode is inferred from the rendered normal-view result structure.
+
+The underlying persistence mechanism is intentionally not assumed.
+
+### MOB-001 — Representative Mobile Critical Journey
+
+**Layer:** E2E / Responsive  
+**Priority:** P2  
+**Intended CI target:** Nightly  
+**Status:** Implemented
+
+```gherkin
+Scenario: User completes the critical Train journey on a representative mobile device
+
+  Given I am using a representative iPhone device profile
+  When I search for "Train"
+  And I select the second lot from the search results
+  Then the selected lot page should open successfully
+  And the opened lot should match the selected result
+  And I should be able to retrieve the lot title
+  And I should be able to retrieve the favourites count
+  And I should be able to retrieve the current bid
+```
+
+#### Test intent
+
+This scenario samples responsive compatibility with Playwright's `iPhone 13` device profile instead of reproducing the complete desktop suite across a device matrix.
+
+Exploration exposed two responsive implementation differences that required framework hardening:
+
+- the mobile header keeps the search combobox hidden until the mobile search control is opened;
+- multiple responsive bid representations may coexist in the DOM, so the lot helper must resolve the visible bid state rather than assuming a desktop-only container.
+
+The same Page Objects and business assertions are reused across desktop and mobile. This demonstrates that responsive differences are encapsulated in the interaction layer rather than duplicated into device-specific test logic.
+
+The scenario remains P2 because one representative profile is a compatibility signal, not evidence of complete mobile or tablet coverage.
+
 ## 9. Internationalization Coverage
 
 ### I18N-001 — Language Selection and Persistence
 
 **Layer:** Internationalization / E2E  
 **Priority:** P2  
-**CI target:** Nightly  
+**Intended CI target:** Nightly  
 **Status:** Implemented
 
 ```gherkin
@@ -486,7 +555,7 @@ After the scoped timeout adjustment, three consecutive full-suite executions com
 
 **Layer:** Internationalization  
 **Priority:** Experimental  
-**CI target:** Nightly  
+**Intended CI target:** Nightly  
 **Status:** Candidate
 
 ```gherkin
@@ -525,7 +594,7 @@ A detection failure should be interpreted carefully rather than automatically pr
 
 **Layer:** Visual  
 **Priority:** P2  
-**CI target:** Nightly  
+**Intended CI target:** Nightly  
 **Status:** Candidate
 
 ```gherkin
@@ -617,27 +686,21 @@ The critical journey already proves that a search result can be selected and ope
 
 Tests that only change the selected position would largely duplicate existing behavior.
 
-### Search result view preference persistence
+### Search sorting and filtering
 
-Manual exploration identified two search-result presentation modes exposed through stable controls:
+Exploratory testing showed that search sorting and category filters are represented through visible UI controls and URL state.
 
-```text
-view-mode-gallery
-view-mode-normal
-```
+A future scenario could validate that changing a supported sort or filter updates the observable search state consistently across the UI, URL parameters and resulting content.
 
-Changing the selected view appeared to persist across subsequent navigation and later visits.
+This is intentionally not implemented in the current suite because it would expand search-specific coverage after higher-value negative, view-mode and responsive risks are already represented.
 
-The persistence mechanism was not established, so the current project should not assume whether the preference is stored in cookies, local storage or another client-side mechanism.
+### Broader view-mode and device matrices
 
-A future scenario could validate that:
+The implemented P2 scenarios now cover one alternate search-result presentation and one representative mobile device profile.
 
-- the user can switch between gallery and normal result views;
-- the selected mode remains active after navigating through search results and returning;
-- the preference remains active after a reload or other clearly defined persistence boundary;
-- search-result interaction remains functional in both presentation modes.
+Broader matrices remain intentionally deferred. Possible future expansion includes additional persistence boundaries, tablet layouts, other high-value device profiles, and explicit compatibility checks across both search-result presentations.
 
-This was intentionally left as a P2 candidate because it represents a distinct preference-persistence risk but provides less value than the reliability, integration and CI hardening completed for the current submission.
+This should remain risk-based rather than multiplying the complete suite across every presentation and device combination.
 
 ### Pagination
 
@@ -723,11 +786,11 @@ Contract validation is intentionally limited to fields relevant to the implement
 
 The runtime validators are additionally covered by deterministic unit tests for accepted and rejected payloads. These tests exercise schema logic without requiring browser startup or production access and are part of the hosted CI quality gate.
 
-#### API-001 — Bidding State Contract
+#### API-001 — UI/API Bidding State Consistency
 
 **Layer:** UI/API Integration + Contract  
 **Priority:** P1  
-**CI target:** Pull Request  
+**Intended CI target:** Pull Request  
 **Status:** Implemented
 
 ```gherkin
@@ -754,7 +817,7 @@ The UI and API are correlated using runtime lot identity, then shared business s
 
 **Layer:** API + Contract  
 **Priority:** P1  
-**CI target:** Pull Request  
+**Intended CI target:** Pull Request  
 **Status:** Implemented
 
 ```gherkin
@@ -780,7 +843,7 @@ The assertions deliberately avoid hard-coded lot IDs, auction positions or aucti
 
 **Layer:** Unit / Schema  
 **Priority:** P1  
-**CI target:** Pull Request  
+**Intended CI target:** Pull Request  
 **Status:** Implemented
 
 ##### Test intent
@@ -801,7 +864,7 @@ These tests complement the production-facing API and integration scenarios by va
 
 **Layer:** Unit / Schema  
 **Priority:** P1  
-**CI target:** Pull Request  
+**Intended CI target:** Pull Request  
 **Status:** Implemented
 
 ##### Test intent
@@ -934,6 +997,8 @@ After dismissal, exploratory testing did not show the consent overlay returning 
 
 This keeps environment setup separate from business behavior while still reproducing a valid user interaction rather than forcing clicks through an active UI layer.
 
+Extended exploratory sessions also surfaced a late NPS/CSAT survey after prolonged browsing. The current suite does not proactively interact with or dismiss that survey because the implemented scenarios normally complete before it appears. If future longer-running scenarios make it a blocker, environment handling should dismiss the prompt without submitting feedback or otherwise changing user state.
+
 ## 16. Reliability Strategy
 
 The suite should prioritize deterministic execution and useful failure diagnostics.
@@ -982,6 +1047,16 @@ The I18N scenario therefore uses a scoped 45-second timeout.
 The adjustment remains local to the scenario because the rest of the suite has not demonstrated a general need for a larger execution budget.
 
 Retries and global timeout increases were intentionally avoided.
+
+### Production-conscious default parallelism
+
+The default Chromium configuration intentionally limits local execution to two workers and sets `fullyParallel: false`.
+
+This keeps production traffic bounded and predictable while still allowing moderate parallel execution across independent test files. CI remains limited to one worker if production-facing execution is later enabled there.
+
+The configuration was validated with the complete current suite after the responsive changes rather than increasing retries or timeouts to compensate for concurrency.
+
+The dedicated cross-browser configuration remains more conservative with one worker because multi-browser concurrency demonstrated a separate, evidence-based reliability risk.
 
 ## 17. Execution Timing and Performance Considerations
 
@@ -1160,6 +1235,8 @@ With an appropriate execution environment, broader scheduled coverage could incl
 ```text
 Broader E2E suite
         ↓
+Alternate view-mode + representative mobile coverage
+        ↓
 Cross-browser execution
         ↓
 Internationalization
@@ -1193,7 +1270,7 @@ Firefox
 WebKit
 ```
 
-The default Playwright configuration remains Chromium-only and is used for normal suite execution.
+The default Playwright configuration remains Chromium-only and is used for normal suite execution. It uses at most two local workers with `fullyParallel: false` so production traffic remains bounded.
 
 A dedicated cross-browser configuration runs only the `@smoke` scenario across all three browser engines with a single worker.
 
@@ -1203,6 +1280,7 @@ This results in two distinct execution modes:
 Default suite
 └── Chromium
     └── Full implemented suite
+        └── 2 local workers, fullyParallel: false
 ```
 
 ```text
@@ -1211,6 +1289,7 @@ Cross-browser validation
 ├── Firefox
 └── WebKit
     └── Critical @smoke journey only
+        └── 1 worker
 ```
 
 The separation avoids multiplying API, integration, negative, and accessibility scenarios across browsers when those tests do not provide equivalent browser-compatibility value.
@@ -1221,9 +1300,9 @@ With an approved production-facing CI environment, the cross-browser smoke confi
 
 ## 22. Test Tags
 
-Tags can allow the same suite to support different execution strategies without duplicating tests.
+Tags allow the same suite to support different execution strategies without duplicating tests.
 
-Current and potential tags include:
+Implemented scenario tags include:
 
 ```text
 @smoke
@@ -1231,10 +1310,13 @@ Current and potential tags include:
 @negative
 @accessibility
 @i18n
-@visual
 @api
 @integration
+@mobile
+@view-mode
 ```
+
+`@visual` remains a potential tag for `VIS-001` if visual regression coverage is implemented. A dedicated `@unit` tag is intentionally unnecessary because deterministic validator tests already have their own directory and `npm run test:unit` command.
 
 Example usage:
 
@@ -1391,6 +1473,9 @@ Potential future coverage includes:
 - Performance testing
 - Load testing
 - Broader internationalization coverage
+- Broader mobile and tablet device coverage beyond the representative iPhone profile
+- Broader search-result view-mode and preference-persistence coverage
+- Search sorting and filtering state validation
 - Deeper visual regression coverage
 - Security testing with explicit authorization
 
