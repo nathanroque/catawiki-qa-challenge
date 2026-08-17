@@ -1,0 +1,26 @@
+{
+  "lots": [
+    {
+      "highest_bidder_token": null,
+      "winner_token": null,
+      "current_bid_amount": {
+        "EUR": 1,
+        "USD": 1,
+        "GBP": 1
+      },
+      "bidding_start_time": "2026-08-13T18:00:00Z",
+      "bidding_end_time": "2026-08-20T18:20:30Z",
+      "reserve_price_met": null,
+      "favorite_count": 10,
+      "closed": false,
+      "id": 100000001,
+      "auction_id": 1200001,
+      "is_buy_now_available": false,
+      "realtime_channel": "CWAUCTION-production-1200001",
+      "use_realtime_message_fallback": false
+    }
+  ],
+  "meta": {
+    "time": 1786974022
+  }
+}

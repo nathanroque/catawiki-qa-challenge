@@ -1,0 +1,7 @@
+{
+  "source": "auction",
+  "previous_lot_id": 100000001,
+  "next_lot_id": 100000003,
+  "current_position": 30,
+  "total_lots": 65
+}

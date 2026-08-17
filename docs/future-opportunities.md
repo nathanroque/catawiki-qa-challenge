@@ -1,299 +1,69 @@
 # Future Opportunities
 
-## Purpose
+These items are deliberately outside the current submission. They should be reconsidered only when risk, authorization, environment, and maintenance cost justify them.
 
-This document summarizes improvements that could increase test coverage, reliability, or execution maturity if the project continued.
+Current coverage and status remain in the [test plan](test-plan.md); current operational constraints remain in the [README](../README.md#key-constraints).
 
-These are not unfinished requirements.
+## Highest-value next step
 
-They were intentionally left out because of production constraints, execution cost, current risk priority, or assignment scope.
+Provide an approved execution environment or internal staging system with controlled accounts and disposable auction data. This would unlock more value than adding further anonymous production variants.
 
-## Testing Opportunities
+With that foundation, prioritize:
 
-### Full-suite cross-browser execution
+1. Critical authenticated and transactional workflows, including safe favourite, bidding, and purchase lifecycle coverage.
+2. Explicit test-data creation, ownership, cleanup, and expiry.
+3. Provider-owned API specifications and compatibility verification where deployment coupling matters.
+4. Functional CI execution with useful artifacts and clear failure ownership.
 
-The current cross-browser strategy runs only the critical smoke journey across Chromium, Firefox, and WebKit.
+## CI evolution
 
-During implementation, concurrent multi-browser execution showed timing instability against production, so the cross-browser configuration currently uses:
+An approved pipeline could layer feedback by cost:
 
-```ts
-workers: 1;
+```text
+Pull request
+  static checks + validator/unit tests
+  → selected API/component checks
+  → critical Chromium smoke
+
+Main or scheduled
+  broader E2E
+  → accessibility and I18N
+  → cross-browser smoke
 ```
 
-Running the entire UI suite across all three browser engines with serialized execution would significantly increase runtime and production traffic.
+Publish HTML/JUnit results and failure diagnostics only when production-facing tests actually execute. A future manual workflow could parameterize browser, locale, environment, and scope. The existing `SEARCH_KEYWORD` override is a local exploratory convenience, not a substitute for controlled test data or a complete parameterized pipeline.
 
-For the current scope, limiting cross-browser execution to the highest-value journey provides a better balance between confidence and execution cost.
+## Quality coverage
 
-This could be revisited if:
+### Accessibility
 
-- Parallel execution becomes reliable
-- A controlled environment becomes available
-- Tests can be distributed across approved runners
-- Broader browser compatibility becomes a higher product risk
+Extend beyond Axe with keyboard navigation, focus order, screen-reader evaluation, zoom, and reflow. Internal issue ownership and stable component fixtures could support finer-grained baselines.
 
 ### Visual regression
 
-Visual regression could detect layout and rendering issues that functional assertions do not catch.
+Target stable, application-owned components with deterministic data. Broad screenshots of auction cards would be noisy because images, prices, countdowns, and seller content change continuously.
 
-It was not implemented because the production marketplace contains highly dynamic content such as lot images, titles, prices, and recommendations, which would make broad visual snapshots noisy and expensive to maintain.
+### Performance and security
 
-A future implementation should focus only on stable application-owned components or use deterministic test data.
+Define authorization, environment, traffic budgets, and measurable objectives first. Do not infer performance from uncontrolled E2E duration or treat public endpoint observations as vulnerabilities.
 
-### Broader internationalization coverage
+### Browser and device coverage
 
-The current I18N scenario validates switching from English to Dutch and preserving the selected locale through the critical journey.
+Use support policy, analytics, and defect history to select additional browsers, real Safari, Android, tablet, or responsive breakpoints. Do not multiply the full suite across a matrix without a risk signal.
 
-Additional locales, currency formatting, date formatting, and broader translation checks could be added later.
+### Search and preference coverage
 
-During implementation, we observed that search results can differ between locales, so future I18N tests should continue using stable application-owned UI as the oracle rather than assuming identical marketplace content.
+Pagination, additional search boundaries, and broader view-mode persistence may be useful independent workflows. Add them only when they validate behavior not already covered by the critical and negative journeys.
 
-### Broader search-result view coverage
+## Framework evolution
 
-The maintained P2 suite now includes a focused normal-view scenario. It validates that the second `Train` result remains identifiable and usable after switching presentation mode and that normal view remains active after navigating to the lot and returning, as well as after a reload.
+Custom fixtures, reusable header components, or typed schema tooling should be introduced only when repeated setup, contract breadth, or ownership creates a concrete maintenance problem. The current suite does not require a base-page hierarchy, dependency-injection layer, Cucumber, dashboard, or separate unit-test runner.
 
-That implementation also hardened `SearchResultsPage.getLotTitle()` after exploration showed that gallery and normal layouts use different internal title markup while preserving the same stable result-container contract.
+## Ideas intentionally not prioritized
 
-Future work could expand this into a deliberate preference-compatibility matrix covering additional persistence boundaries or both view modes across other important workflows. The persistence mechanism should continue to be treated as an implementation detail unless a product contract defines it.
-
-The current scenario is intentionally narrow so that preference testing does not multiply the production-facing suite without a clear risk signal.
-
-### Additional edge and negative coverage
-
-Potential examples include:
-
-- Special-character search
-- Additional fallback states
-- Boundary-value inputs
-- Unexpected API response cases
-
-These were considered lower priority than the implemented P0 and P1 scenarios.
-
-They should be added when they represent a distinct product risk rather than only increasing test count.
-
-### Authenticated and state-changing workflows
-
-Future coverage could include:
-
-- Authentication
-- Favourites
-- User preferences
-- Bidding
-- Purchasing
-
-These scenarios were intentionally excluded because the current suite targets the real production environment.
-
-State-changing workflows should only be automated with dedicated accounts, controlled data, and an environment where side effects can be safely created and cleaned up.
-
-### Performance and security testing
-
-Performance, load, and security testing could provide valuable additional confidence.
-
-They were not included because these activities can generate aggressive traffic or intentionally probe application boundaries.
-
-They require explicit authorization, defined scope, and an appropriate environment.
-
-## Infrastructure Opportunities
-
-### Approved CI execution environment
-
-The most valuable infrastructure improvement would be running the existing production-facing suite automatically in CI.
-
-GitHub-hosted runners received `403 Forbidden / Access Denied` responses from the production edge layer.
-
-The project therefore intentionally keeps hosted CI limited to deterministic repository validation and Playwright discovery instead of attempting to bypass those restrictions.
-
-A future approved or self-hosted runner could enable:
-
-- Automated regression execution
-- Cross-browser validation
-- Accessibility checks
-- I18N checks
-- API tests
-
-### CI reports and artifacts
-
-The project already generates local HTML and JUnit reports.
-
-Once production-facing tests can execute safely in CI, the pipeline could publish:
-
-- HTML reports
-- JUnit results
-- Screenshots
-- Videos
-- Playwright traces
-
-This would improve failure investigation without requiring local reproduction.
-
-### Layered execution strategy
-
-With a suitable CI environment, execution could be split by feedback speed and risk.
-
-For example:
-
-```text
-Pull Request
-    ↓
-Static validation
-    ↓
-Critical tests
-
-Main branch
-    ↓
-Broader regression
-
-Scheduled run
-    ↓
-Cross-browser
-    ↓
-Accessibility
-    ↓
-I18N
-```
-
-This would avoid running every expensive scenario on every code change.
-
-### Parameterized CI execution
-
-A future CI pipeline could support manually or automatically selecting execution dimensions such as:
-
-- Target browser
-- Locale
-- Target environment
-- Test scope
-
-For example:
-
-```text
-Environment: controlled-test
-Browser: firefox
-Locale: nl
-Scope: smoke
-```
-
-This could allow the same automation framework to support targeted validation without duplicating workflows.
-
-It was not implemented because the current project has only one available target environment, the implemented I18N coverage intentionally validates a specific English-to-Dutch journey, and production-facing execution is currently unavailable from GitHub-hosted runners.
-
-If an approved CI environment became available, these dimensions could be exposed through pipeline inputs and mapped to Playwright projects, configuration, environment variables, and test tags.
-
-## Framework Opportunities
-
-### Custom fixtures
-
-Playwright fixtures could eventually centralize repeated setup such as page objects, API clients, authenticated state, or controlled test data.
-
-They were not introduced because the current suite is small enough that explicit setup remains easier to understand.
-
-Fixtures should be added when duplication becomes a real maintenance problem.
-
-### Reusable page components
-
-Shared UI components such as the application header could eventually become reusable Page Object components.
-
-This was considered during I18N implementation but intentionally avoided because the current structure remains simple and duplication is still limited.
-
-The abstraction should be introduced only when multiple pages genuinely share the same behavior.
-
-### Broader contract validation
-
-The existing runtime schemas validate the contracts required by current scenarios.
-
-More APIs and properties could be covered later, but exhaustive production schemas would add maintenance cost without necessarily providing useful confidence.
-
-Future contract work should remain focused on fields and invariants the product actually depends on.
-
-## Quality Opportunities
-
-### Expanded accessibility testing
-
-The current automated accessibility suite provides regression signal using axe.
-
-Future work could include:
-
-- Keyboard navigation
-- Focus order
-- Screen-reader testing
-- Zoom and reflow
-- Manual WCAG evaluation
-
-Automated scans should not be treated as proof of full accessibility compliance.
-
-### Broader responsive and device coverage
-
-The maintained suite now samples responsive compatibility with Playwright's `iPhone 13` device profile. The mobile scenario reuses the critical search-to-lot abstractions and validates lot identity, title, favourite count, and current bid.
-
-Implementation exposed responsive differences in both the header search interaction and bid rendering, which were handled inside the existing Page Objects rather than through device-specific test duplication.
-
-Future work could add a small risk-based set of additional targets, for example:
-
-- a representative tablet profile;
-- another high-value mobile form factor when product analytics justify it;
-- responsive accessibility and reflow checks;
-- selected view-mode/device combinations if those interactions become a demonstrated risk.
-
-The goal should remain representative compatibility coverage rather than multiplying the entire suite across a large device matrix.
-
-### Real Safari validation
-
-The current cross-browser suite uses Playwright WebKit.
-
-A real Safari/macOS environment could provide additional confidence for Safari-specific behavior that bundled WebKit may not reproduce.
-
-This would require macOS infrastructure or an external browser-testing service.
-
-## Key Constraints Discovered
-
-Several observations influenced the current architecture:
-
-### Production environment
-
-The target is the real Catawiki production application, so the suite remains read-only and avoids aggressive traffic or state changes.
-
-### Headless and CI restrictions
-
-Headless execution and GitHub-hosted traffic can receive production edge restrictions.
-
-The project documents these restrictions rather than attempting to bypass them.
-
-### Dynamic production data
-
-Lot IDs, titles, bids, and result ordering change continuously.
-
-Tests therefore discover runtime data and validate relationships or invariants instead of hard-coding temporary production values.
-
-### Cross-browser timing
-
-Concurrent browser execution showed timing instability.
-
-The dedicated cross-browser suite therefore prioritizes reliability and runs with one worker.
-
-### Locale-dependent results
-
-The same query can return different marketplace results under different locales.
-
-I18N validation therefore focuses on deterministic application-owned locale behavior.
-
-## If the Project Continued
-
-A reasonable next sequence would be:
-
-1. Provide an approved CI execution environment.
-2. Run the existing suite automatically.
-3. Publish test reports and diagnostics from CI.
-4. Re-evaluate broader cross-browser execution.
-5. Expand P2 coverage based on real product risk, including broader preference, device, or responsive matrices only where justified.
-6. Add broader I18N and accessibility coverage.
-7. Introduce authenticated and state-changing scenarios only in a controlled environment.
-8. Add visual, performance, and security testing where appropriate.
-
-## Conclusion
-
-The current solution intentionally prioritizes:
-
-- High-value coverage
-- Production safety
-- Reliable execution
-- Maintainability
-- Clear test intent
-
-The opportunities above show how the framework could evolve without suggesting that every possible testing technique should be implemented immediately.
+- Random lot selection: reduces reproducibility without adding a clear product risk.
+- Image recognition: seller-provided imagery is not a reliable oracle for the search engine's business semantics.
+- Execution video as a submission artifact: failure video already exists; a curated demo is optional presentation material, not test evidence.
+- Pre-commit hooks: optional developer ergonomics; hosted quality gates are the enforceable source of truth.
+- A testing dashboard: unjustified for the suite size and absent functional CI execution.
+- Fail-fast tuning: low value while the suite is small and independent diagnostic coverage is preferred.

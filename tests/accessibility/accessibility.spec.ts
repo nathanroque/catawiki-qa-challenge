@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { SearchPage } from '../../pages/SearchPage';
 import { SearchResultsPage } from '../../pages/SearchResultsPage';
 import { LotPage } from '../../pages/LotPage';
+import { keyword } from '../../support/test-data';
 import {
   landingPageKnownViolationIds,
   searchResultsKnownViolationIds,
@@ -68,10 +69,10 @@ test('search results page has no unexpected serious or critical accessibility vi
     await searchPage.goto();
   });
 
-  await test.step('Search for "Train"', async () => {
-    await searchPage.searchFor('Train');
+  await test.step(`Search for ${keyword}`, async () => {
+    await searchPage.searchFor(keyword);
 
-    await expect(page).toHaveURL(/\/en\/s\?q=Train/);
+    await expect(page).toHaveURL(new RegExp(`/en/s\\?q=${keyword}`));
 
     await expect(searchResultsPage.lots.first()).toBeVisible();
   });
@@ -123,10 +124,10 @@ test('lot details page has no unexpected serious or critical accessibility viola
     await searchPage.goto();
   });
 
-  await test.step('Search for "Train"', async () => {
-    await searchPage.searchFor('Train');
+  await test.step(`Search for ${keyword}`, async () => {
+    await searchPage.searchFor(keyword);
 
-    await expect(page).toHaveURL(/\/en\/s\?q=Train/);
+    await expect(page).toHaveURL(new RegExp(`/en/s\\?q=${keyword}`));
 
     await expect(searchResultsPage.getLot(1)).toBeVisible();
   });

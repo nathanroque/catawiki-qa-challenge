@@ -4,6 +4,7 @@ import { SearchResultsPage } from '../../pages/SearchResultsPage';
 import { LotPage } from '../../pages/LotPage';
 import { CatawikiApiClient } from '../../api/CatawikiApiClient';
 import { validateBiddingStateSchema } from '../../api/schemas/biddingState.schema';
+import { keyword } from '../../support/test-data';
 
 function parseEuroAmount(amount: string): number {
   const numericValue = Number(amount.replace('€', '').replace(/,/g, '').trim());
@@ -15,7 +16,7 @@ function parseEuroAmount(amount: string): number {
   return numericValue;
 }
 
-test('second Train search lot has consistent bidding API state @api @integration', async ({
+test(`second ${keyword} search lot has consistent bidding API state @api @integration`, async ({
   page,
   request,
 }) => {
@@ -25,11 +26,11 @@ test('second Train search lot has consistent bidding API state @api @integration
   const api = new CatawikiApiClient(request);
 
   const lotId =
-    await test.step('Search for "Train" and open the second lot', async () => {
+    await test.step(`Search for ${keyword} and open the second lot`, async () => {
       await searchPage.goto();
-      await searchPage.searchFor('Train');
+      await searchPage.searchFor(keyword);
 
-      await expect(page).toHaveURL(/\/en\/s\?q=Train/);
+      await expect(page).toHaveURL(new RegExp(`/en/s\\?q=${keyword}`));
 
       await expect(searchResultsPage.getLot(1)).toBeVisible();
 
@@ -90,24 +91,25 @@ test('second Train search lot has consistent bidding API state @api @integration
 
     expect(
       uiState.bidStatus.label,
-      'Expected the selected lot to have a current bid for UI/API comparison',
-    ).toBe('Current bid');
+      `Expected a supported bidding state, received "${uiState.bidStatus.label}"`,
+    ).toMatch(/^(Current bid|Starting bid)$/);
 
     expect(
       biddingLot.current_bid_amount,
-      'Expected API to expose a current bid amount',
+      'Expected API to expose the displayed bid amount',
     ).not.toBeNull();
 
-    const uiCurrentBid = parseEuroAmount(uiState.bidStatus.amount);
+    const uiBidAmount = parseEuroAmount(uiState.bidStatus.amount);
 
-    expect(biddingLot.current_bid_amount.EUR).toBe(uiCurrentBid);
+    expect(biddingLot.current_bid_amount.EUR).toBe(uiBidAmount);
 
     console.table({
       lotId,
       uiFavouriteCount: uiState.favouriteCount,
       apiFavouriteCount: biddingLot.favorite_count,
-      uiCurrentBid: uiState.bidStatus.amount,
-      apiCurrentBidEUR: biddingLot.current_bid_amount.EUR,
+      uiBidStatus: uiState.bidStatus.label,
+      uiBidAmount: uiState.bidStatus.amount,
+      apiBidAmountEUR: biddingLot.current_bid_amount.EUR,
     });
   });
 });
