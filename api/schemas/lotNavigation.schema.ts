@@ -1,5 +1,20 @@
 import { expect } from '@playwright/test';
 
+/**
+ * Validates the runtime shape and key invariants of a lot-navigation response.
+ *
+ * The validation is intentionally limited to the fields consumed by the
+ * navigation tests, including source, adjacent lot identifiers, current
+ * position and total lot count.
+ *
+ * Cross-response relationships, such as sequential positions and reverse
+ * navigation references, are validated by the behavioral API test rather than
+ * by this schema validator.
+ *
+ * @param body Unknown response payload returned by the lot-navigation endpoint.
+ * @throws When a required consumed field has an unexpected type or invalid
+ * value.
+ */
 export function validateLotNavigationSchema(body: unknown) {
   expect(body).toBeTruthy();
   expect(typeof body).toBe('object');

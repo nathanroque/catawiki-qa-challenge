@@ -172,9 +172,9 @@ Scope: smoke
 
 This could allow the same automation framework to support targeted validation without duplicating workflows.
 
-It was not implemented because the current project has only one available target environment, the implemented I18N coverage intentionally validates a specific English-to-Dutch journey, and production-facing execution is currently unavailable from GitHub-hosted runners.
+The suite now supports a small local `SEARCH_KEYWORD` override while keeping `Train` as the canonical assignment default. Broader pipeline parameterization was not implemented because the current project has only one available target environment, the implemented I18N coverage intentionally validates a specific English-to-Dutch journey, and production-facing execution is currently unavailable from GitHub-hosted runners.
 
-If an approved CI environment became available, these dimensions could be exposed through pipeline inputs and mapped to Playwright projects, configuration, environment variables, and test tags.
+If an approved CI environment became available, browser, locale, environment, scope, and other justified execution dimensions could be exposed through pipeline inputs and mapped to Playwright projects, configuration, environment variables, and test tags.
 
 ## Framework Opportunities
 
@@ -220,7 +220,7 @@ Automated scans should not be treated as proof of full accessibility compliance.
 
 ### Broader responsive and device coverage
 
-The maintained suite now samples responsive compatibility with Playwright's `iPhone 13` device profile. The mobile scenario reuses the critical search-to-lot abstractions and validates lot identity, title, favourite count, and current bid.
+The maintained suite now samples responsive compatibility with Playwright's `iPhone 13` device profile. The mobile scenario reuses the critical search-to-lot abstractions and validates lot identity, title, favourite count, and the visible bidding state and amount.
 
 Implementation exposed responsive differences in both the header search interaction and bid rendering, which were handled inside the existing Page Objects rather than through device-specific test duplication.
 

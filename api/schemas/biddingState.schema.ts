@@ -1,5 +1,20 @@
 import { expect } from '@playwright/test';
 
+/**
+ * Validates the runtime shape and key invariants of the bidding-state response
+ * consumed by the automated tests.
+ *
+ * The validation is intentionally scoped to fields used by the suite, including
+ * lot and auction identifiers, bid amounts, favourite count, bidding timestamps,
+ * closed state and response metadata.
+ *
+ * This is a focused runtime contract check for the test suite and does not aim
+ * to model or validate the complete provider response schema.
+ *
+ * @param body Unknown response payload returned by the bidding-state endpoint.
+ * @throws When a required consumed field has an unexpected type, value or
+ * relationship.
+ */
 export function validateBiddingStateSchema(body: unknown) {
   expect(body).toBeTruthy();
   expect(typeof body).toBe('object');

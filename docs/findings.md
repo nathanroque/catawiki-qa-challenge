@@ -140,7 +140,9 @@ A direct attempt to retrieve the search document through Playwright `APIRequestC
 
 The implementation was therefore redesigned as a UI/API integration test rather than attempting to bypass the production edge behavior.
 
-The integration test was later strengthened to compare shared runtime business state for the selected lot. The displayed favourite count is compared with `favorite_count`, and the displayed euro current bid is compared with `current_bid_amount.EUR`, in addition to correlating the runtime lot identifier.
+The integration test was later strengthened to compare shared runtime business state for the selected lot. The displayed favourite count is compared with `favorite_count`, and the displayed euro bid amount is compared with `current_bid_amount.EUR`, in addition to correlating the runtime lot identifier.
+
+During live execution, the second result may expose either `Current bid` or `Starting bid`. The suite preserves that semantic distinction in the UI result while validating the associated amount. In the observed bidding payload, `current_bid_amount` can still contain the comparable displayed amount when the UI is in the `Starting bid` state, so the integration check compares the value without relabeling the UI state.
 
 ### Read-only JSON endpoints
 
@@ -161,6 +163,8 @@ Accept: application/json
 allowed the endpoints to be exercised without an authenticated session or manually supplied cookies.
 
 These observations are not treated as security vulnerabilities. The endpoints were observed as part of normal public application behavior and are only used for low-impact, read-only validation.
+
+Sanitized examples of the bidding-state and lot-navigation payloads are stored under `docs/api-samples/` as documentation references. They are not production fixtures, complete schemas, or stable expected data.
 
 ### Locale-dependent search results
 

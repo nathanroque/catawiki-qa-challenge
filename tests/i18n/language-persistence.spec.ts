@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { SearchPage } from '../../pages/SearchPage';
 import { SearchResultsPage } from '../../pages/SearchResultsPage';
+import { keyword } from '../../support/test-data';
 
 test.describe.configure({
   timeout: 45_000,
@@ -30,8 +31,8 @@ test('selected language persists through the critical journey @i18n @e2e', async
     ).toBeVisible();
   });
 
-  await test.step('Search for Train using the Dutch experience', async () => {
-    await searchPage.searchFor('Train');
+  await test.step(`Search for ${keyword} using the Dutch experience`, async () => {
+    await searchPage.searchFor(keyword);
 
     await expect(page).toHaveURL(/\/nl\/s\?/);
 

@@ -10,9 +10,9 @@ The implemented coverage currently includes:
 
 - End-to-end validation of the required `Train` search journey
 - Validation that the selected search result matches the opened lot
-- Retrieval and validation of lot title, favourite count and current bid
+- Retrieval and validation of lot title, favourite count, visible bidding state and bid amount
 - Negative search coverage for searches with no exact matches
-- UI/API integration validation for the second `Train` search result, including lot identity, favourite count and current bid
+- UI/API integration validation for the second `Train` search result, including lot identity, favourite count and displayed bid amount
 - Direct API validation of lot navigation consistency
 - Runtime schema validation for selected API responses, backed by deterministic unit tests
 - Automated accessibility regression checks for:
@@ -66,6 +66,10 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   │   ├── 005-risk-based-test-planning.md
 │   │   ├── 006-accessibility-baseline.md
 │   │   └── 007-cross-browser-execution-strategy.md
+│   ├── api-samples/
+│   │   ├── README.md
+│   │   ├── bidding-state.example.json
+│   │   └── lot-navigation.example.json
 │   ├── approach.md
 │   ├── findings.md
 │   ├── future-opportunities.md
@@ -77,7 +81,8 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   └── SearchResultsPage.ts
 │
 ├── support/
-│   └── cookie-consent.ts
+│   ├── cookie-consent.ts
+│   └── test-data.ts
 │
 ├── tests/
 │   ├── accessibility/
@@ -118,6 +123,8 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 - `tests/unit/` contains deterministic unit coverage for runtime schema validators.
 - `tests/accessibility/` contains automated accessibility regression checks.
 - `docs/` contains the test strategy, investigation findings and architectural decisions.
+- `docs/api-samples/` contains sanitized response examples observed during read-only API reconnaissance; they are documentation only, not fixtures or complete provider contracts.
+- `support/test-data.ts` centralizes the canonical search keyword and its optional environment override.
 - `playwright.config.ts` defines the default Chromium execution with bounded local parallelism.
 - `playwright.cross-browser.config.ts` defines serialized smoke execution across Chromium, Firefox and WebKit.
 - `tests/i18n/` contains internationalization and locale-persistence coverage.
@@ -244,6 +251,27 @@ npx playwright test tests/i18n --project=chromium
 npx playwright test tests/e2e/mobile-search.spec.ts --project=chromium
 ```
 
+### Optional search keyword override
+
+The canonical challenge keyword remains `Train`.
+
+Search-based scenarios read the shared value from `support/test-data.ts`, where `SEARCH_KEYWORD` may override the default for local exploratory execution without changing test source.
+
+PowerShell:
+
+```powershell
+$env:SEARCH_KEYWORD="Car"
+npm test
+```
+
+Bash:
+
+```bash
+SEARCH_KEYWORD=Car npm test
+```
+
+The override is intended for simple exploratory search terms. A different live query may not satisfy the same production-data preconditions as the canonical `Train` journey, such as having at least two results or exposing the same bidding state.
+
 ### Run smoke tests in Chromium
 
 ```bash
@@ -290,7 +318,7 @@ The framework also captures:
 
 - Screenshots on failure
 - Video retained on failure
-- Trace collection on retry
+- Trace collection when retries are explicitly enabled
 - Named test steps
 - Runtime diagnostic values where useful
 
@@ -349,6 +377,8 @@ The tests therefore avoid hard-coding volatile values such as:
 
 Instead, runtime values are discovered and used to validate relationships and invariants.
 
+The canonical search keyword is centralized in `support/test-data.ts` and defaults to `Train`. `SEARCH_KEYWORD` can override it for local exploratory reuse, while the documented assignment baseline remains the required `Train` journey.
+
 For example, the critical E2E scenario captures the selected search result and verifies that the corresponding lot is the one opened after navigation.
 
 The API navigation scenario discovers a current lot dynamically and validates relationships between adjacent lot responses rather than relying on fixed identifiers.
@@ -370,7 +400,9 @@ For example:
 
 Only fields relevant to the implemented scenarios are validated to avoid unnecessary coupling to the complete backend implementation.
 
-The UI/API integration scenario now compares meaningful shared runtime state for the selected lot: lot identity, favourite count and the displayed EUR current bid.
+The UI/API integration scenario compares meaningful shared runtime state for the selected lot: lot identity, favourite count and the displayed euro bid amount. The UI keeps the semantic state explicit (`Current bid` or `Starting bid`), while the observed bidding API exposes the comparable euro value through `current_bid_amount.EUR`.
+
+Sanitized examples of the observed read-only payload shapes are kept under [`docs/api-samples/`](docs/api-samples/). They are documentation references only and are not used as deterministic fixtures or treated as complete provider contracts.
 
 ## Accessibility Testing
 
@@ -424,7 +456,7 @@ Two bounded P2 scenarios extend the critical flow without multiplying the entire
 
 The alternate-view scenario switches search results from gallery to normal mode, verifies that the second result remains identifiable and usable, and checks that the selected view persists after navigating back and reloading. Exploration exposed a real Page Object coupling to gallery-specific title markup, which was then generalized while preserving the stable lot-container identity contract.
 
-The mobile scenario uses Playwright's `iPhone 13` device profile and reuses the same business assertions as the desktop critical journey. Exploration showed that the mobile header requires opening the search UI before the combobox becomes available and that multiple responsive bid representations may coexist in the DOM. The Page Objects encapsulate those differences by opening the mobile search when necessary and resolving the visible bid representation.
+The mobile scenario uses Playwright's `iPhone 13` device profile and reuses the same business assertions as the desktop critical journey. It validates the selected lot identity, title, favourite count, and the visible bidding state and amount. Exploration showed that the mobile header requires opening the search UI before the combobox becomes available and that multiple responsive bid representations may coexist in the DOM. The Page Objects encapsulate those differences by opening the mobile search when necessary and resolving the visible bid representation.
 
 These scenarios are compatibility signals rather than claims of complete device or responsive coverage.
 
@@ -459,9 +491,9 @@ Examples include:
 - Default Chromium execution uses `fullyParallel: false` with at most two local workers to keep production traffic bounded.
 - Cross-browser smoke execution uses a single worker after concurrent browser execution demonstrated intermittent timing instability, with a scoped 45-second timeout for the longer live journey.
 
-Local execution uses no automatic retries.
+Retries are disabled by default in the current Playwright configuration.
 
-A retry may be enabled in CI for diagnostic purposes, but retries are not treated as a substitute for investigating unreliable behavior.
+If retries are introduced later for an approved production-facing CI job, they should be used as diagnostic evidence rather than as a substitute for investigating unreliable behavior.
 
 ## CI/CD
 

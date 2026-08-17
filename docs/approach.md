@@ -45,7 +45,7 @@ The responsibilities were separated as follows:
   - Opens a selected lot
 
 - `LotPage`
-  - Exposes lot details such as title, favourite count, and current bid
+  - Exposes lot details such as title, favourite count, and the visible bidding state and amount
 
 The test remains responsible for the expected behavior and assertions, while the Page Objects contain knowledge about how to interact with each page.
 
@@ -69,7 +69,7 @@ During implementation, different behavior was observed between browser execution
 
 These behaviors were treated as environmental concerns rather than being hidden through arbitrary waits or broad timeout increases.
 
-The headless behavior remains an item to investigate before introducing CI execution.
+Later GitHub-hosted CI execution confirmed that the production edge restriction also affects that environment. Hosted CI therefore remains limited to deterministic repository checks and Playwright discovery rather than attempting to bypass the restriction.
 
 ## 6. Expanding Beyond the Core Scenario
 
@@ -162,9 +162,9 @@ The production edge layer returned `403 Access Denied` for that request.
 
 Rather than attempting to bypass the production security behavior, the test was redesigned as a UI/API integration scenario.
 
-The browser performs the normal `"Train"` search and identifies the second lot exactly as a customer would. The lot identifier discovered through the UI is then used to request the corresponding read-only bidding state API.
+The browser performs the canonical `"Train"` search by default and identifies the second lot exactly as a customer would. The shared keyword is centralized in `support/test-data.ts` and can be overridden through `SEARCH_KEYWORD` for local exploratory execution without changing test source.
 
-The scenario was later strengthened beyond identity continuity. After opening the selected lot, the test captures the displayed favourite count and current bid, then compares them with `favorite_count` and `current_bid_amount.EUR` for the same runtime lot returned by the bidding API. This makes the integration assertion about shared business state rather than only confirming that the same identifier exists in both layers.
+The scenario was later strengthened beyond identity continuity. After opening the selected lot, the test captures the displayed favourite count plus the visible bidding state and amount, then compares them with `favorite_count` and `current_bid_amount.EUR` for the same runtime lot returned by the bidding API. The UI state remains explicit as either `Current bid` or `Starting bid`, so a valid no-bid production state is not mislabeled as an active bid. This makes the integration assertion about shared business state rather than only confirming that the same identifier exists in both layers.
 
 ## 11. API Client and Contract Validation
 
@@ -185,6 +185,8 @@ Schema validation is intentionally kept separate from business assertions.
 For example, validating that `current_position` is an integer is a contract check, while validating that the next lot position equals the current position plus one is a business invariant.
 
 Only fields relevant to the implemented scenarios are validated to avoid unnecessarily coupling the suite to the complete API implementation.
+
+Sanitized response examples observed during read-only reconnaissance are kept under `docs/api-samples/`. They document the surrounding payload shape but are not used as fixtures, mocks, or complete provider contracts.
 
 Deterministic unit tests were later added around both runtime validators. They cover representative valid and invalid payloads, including null bidding state, malformed currency values, invalid favourite counts, invalid bidding ranges, and non-integer adjacent lot identifiers. This gives CI meaningful schema-validation coverage without requiring production access.
 
@@ -450,7 +452,7 @@ The representative mobile scenario now validates the same core runtime informati
 - selected lot identity;
 - lot title;
 - favourite count;
-- current bid.
+- visible bidding state and amount.
 
 Both the desktop smoke scenario and the mobile scenario were rerun after the Page Object changes and passed. The mobile scenario was then included in the complete Chromium suite and passed as part of the 24-test run.
 
