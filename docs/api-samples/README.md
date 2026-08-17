@@ -1,30 +1,19 @@
 # API Response Samples
 
-This directory contains sanitized examples of read-only API responses observed during exploratory testing against the public Catawiki application.
+This directory contains sanitized examples observed during read-only reconnaissance of the public Catawiki application.
 
-The samples are provided for documentation and implementation context only.
+They provide documentation context only. They are not:
 
-They are not:
-
-- deterministic test fixtures;
+- deterministic fixtures;
 - mocked production responses;
-- complete provider contracts;
-- sources of hard-coded test expectations.
+- stable expected values;
+- complete provider contracts.
 
-Runtime tests continue to discover and validate live response data.
-
-The runtime validators intentionally check only the fields and invariants consumed by the implemented scenarios. Additional fields present in an observed payload may therefore appear in these examples without being part of the validator's maintained scope.
+The maintained tests discover live values and validate only the response fields and invariants they consume. See the [test plan](../test-plan.md#api-001--uiapi-bidding-consistency) for scenario intent and [findings](../findings.md#api-and-network-observations) for the evidence context.
 
 ## Samples
 
-### `bidding-state.example.json`
+- [`bidding-state.example.json`](bidding-state.example.json) illustrates observed bidding amounts, favourite count, timestamps, identifiers, state, and surrounding provider metadata.
+- [`lot-navigation.example.json`](lot-navigation.example.json) illustrates source, adjacent identifiers, current position, and total lots.
 
-Represents an observed bidding-state response containing the displayed bid amount, favourite count, bidding timestamps, identifiers, and additional provider metadata.
-
-The UI may expose either `Current bid` or `Starting bid` depending on live auction state. The observed API payload uses the `current_bid_amount` field for the comparable monetary value used by the integration scenario.
-
-### `lot-navigation.example.json`
-
-Represents an observed lot-navigation response containing the source, adjacent lot identifiers, current position, and total number of lots.
-
-The behavioral API test discovers live identifiers at runtime and validates relationships across adjacent responses rather than treating the values in this sample as stable data.
+The UI can show `Current bid` or `Starting bid`; the sample API uses `current_bid_amount` for the euro value compared by the integration scenario. No sample value is used as a hard-coded assertion.

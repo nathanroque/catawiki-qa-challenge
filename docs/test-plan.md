@@ -94,7 +94,7 @@ No test should depend on another test being executed first.
 
 ### Production interactions must remain non-destructive
 
-The production guardrails defined in ADR 004 apply to all scenarios in this plan.
+The [production guardrails](adr/004-production-test-guardrails.md) defined in ADR 004 apply to all scenarios in this plan.
 
 ### Additional tests must justify their cost
 
@@ -253,13 +253,9 @@ Scenario: Landing page has no unexpected high-severity accessibility violations
 
 The landing page is scanned with `@axe-core/playwright` to provide an automated accessibility regression signal.
 
-The initial scan was intentionally configured to fail on any `serious` or `critical` finding. Repeated exploratory and full-suite execution identified a known set of existing high-severity axe rule IDs in the production application.
+The implemented scenario uses an explicit rule-ID baseline for high-severity production findings already observed in this page context. It fails when a new `serious` or `critical` rule ID appears while keeping known findings visible for review.
 
-Because this project does not control the Catawiki production code, leaving the test permanently failing on those existing findings would reduce its value as a regression signal. The implemented scenario therefore uses an explicit known-issue baseline and fails when a new high-severity violation rule appears outside that baseline.
-
-The baseline is maintained by axe violation rule ID rather than exact affected-node count. The exact set present in an individual execution and the number of affected nodes may vary because the production page contains dynamic and conditionally rendered content. A known rule is therefore not required to appear in every execution.
-
-Known findings remain visible in the test output for diagnostic and review purposes. The baseline is intended to make existing findings explicit, not to classify them as acceptable product behavior.
+The detailed production evidence and limitations of rule-ID baselining are documented in [Accessibility observations](findings.md#accessibility-observations). The durable baseline policy and trade-offs are recorded in [ADR 006 — Accessibility Baseline](adr/006-accessibility-baseline.md).
 
 Current landing-page baseline:
 
@@ -300,8 +296,7 @@ The search-results page is scanned independently from the landing page so that
 existing accessibility findings remain specific to the page context in which
 they were observed.
 
-Repeated exploratory execution identified the following known high-severity
-rule IDs:
+The known high-severity rule IDs for this page context are:
 
 ```text
 button-name
@@ -309,12 +304,7 @@ color-contrast
 svg-img-alt
 ```
 
-`button-name` and `svg-img-alt` were consistently observed during the initial
-isolated executions. `color-contrast` was additionally observed during
-full-suite execution on dynamic lot countdown content.
-
-The baseline therefore represents rule categories confirmed within this page
-context rather than rules that must appear in every execution.
+Reproduction details and the observed variability behind this baseline are kept in [Search-results accessibility observations](findings.md#search-results-known-rule-ids).
 
 ### A11Y-003 — Lot Details Accessibility
 
@@ -337,8 +327,7 @@ Scenario: Lot details page has no unexpected high-severity accessibility violati
 The lot-details page is scanned using its own accessibility baseline rather
 than inheriting findings from either the landing page or search-results page.
 
-Repeated exploratory execution identified the following known high-severity
-rule IDs:
+The known high-severity rule IDs for this page context are:
 
 ```text
 button-name
@@ -348,21 +337,13 @@ scrollable-region-focusable
 svg-img-alt
 ```
 
-`button-name`, `color-contrast`, `scrollable-region-focusable`, and
-`svg-img-alt` were observed across all exploratory executions.
-
-`link-name` was observed in one execution and was not reproduced in subsequent
-isolated scans. Because the finding was confirmed within the lot-details
-context, it remains part of the known baseline.
-
-Affected-node counts varied between executions, so the baseline remains based
-on rule IDs rather than exact counts.
+The intermittent `link-name` observation, affected-node variability, and baseline limitations are documented in [Lot-page accessibility observations](findings.md#lot-page-known-rule-ids).
 
 #### Accessibility scope
 
 Automated accessibility testing provides a useful regression signal but does not prove complete WCAG compliance.
 
-Manual accessibility analysis remains outside the scope of this assignment.
+Manual accessibility analysis remains outside the scope of this assignment. Broader accessibility work is tracked in [Future Opportunities](future-opportunities.md#accessibility).
 
 Accessibility scans currently act as reporting and regression checks rather than strict zero-violation PR gates because the production environment contains pre-existing automated findings outside the scope of this project.
 
@@ -404,13 +385,9 @@ The default Playwright configuration remains Chromium-only so that normal suite 
 
 #### Reliability observation
 
-The critical journey completed successfully when Chromium, Firefox, and WebKit were executed individually.
+Cross-browser smoke execution is intentionally serialized because concurrent multi-project runs showed timing instability against the live production environment.
 
-When the broader multi-project execution was allowed to run concurrently, Firefox and WebKit experienced intermittent timeouts in different parts of the journey, including navigation completion and a late Usercentrics overlay intercepting interaction.
-
-The same configured execution completed successfully with a single worker.
-
-Cross-browser smoke execution is therefore intentionally serialized rather than relying on higher global timeouts or retries to mask concurrency-related instability against the production environment.
+The observation history is recorded in [Execution observations](findings.md#execution-observations), while the durable single-worker strategy and trade-offs are captured in [ADR 007 — Cross-Browser Execution Strategy](adr/007-cross-browser-execution-strategy.md).
 
 ## 8. P2 / Stretch Coverage
 
@@ -746,6 +723,8 @@ GET /buyer/api/v3/lots/{lotId}/navigation
 GET /buyer/api/v3/lots/{lotId}/bids
 ```
 
+Observed API behavior and its production context are documented in [API and network observations](findings.md#api-and-network-observations). Sanitized payload examples are available in [API Response Samples](api-samples/README.md).
+
 Direct requests to these endpoints can be executed without authentication or prior browser navigation when the client explicitly requests JSON:
 
 ```http
@@ -785,7 +764,7 @@ Extracting `__NEXT_DATA__` may be useful for higher-level integration analysis, 
 
 Both implemented API-related scenarios include runtime validation of the response structures used by the tests.
 
-Contract validation is intentionally limited to fields relevant to the implemented scenarios, while behavioral and cross-response assertions remain in the tests.
+Contract validation is intentionally limited to fields relevant to the implemented scenarios, while behavioral and cross-response assertions remain in the tests. The reasoning behind this boundary is described in [Focused runtime validation](approach.md#focused-runtime-validation).
 
 The runtime validators are additionally covered by deterministic unit tests for accepted and rejected payloads. These tests exercise schema logic without requiring browser startup or production access and are part of the hosted CI quality gate.
 
@@ -889,7 +868,7 @@ Both schema-validator unit suites are included in the deterministic `npm run qua
 
 ### Production Safety
 
-Only read-only endpoints observed during normal anonymous user interaction should be automated.
+Only read-only endpoints observed during normal anonymous user interaction should be automated. The repository-wide production rules are defined in [ADR 004 — Production Test Guardrails](adr/004-production-test-guardrails.md).
 
 The suite should not:
 
@@ -978,31 +957,19 @@ When production data must be referenced, assertions should validate structural a
 
 Cookie consent and locale handling are explicit environment preconditions for the E2E suite.
 
-The primary journey should navigate directly to the English locale.
+The maintained helper synchronizes on the observable Usercentrics blocking overlay, dismisses the observed public action when required, and verifies that the blocker is gone before continuing. Vendor-specific knowledge remains isolated in the support utility rather than leaking into Page Objects or business assertions.
 
-Fresh contexts can initialize Usercentrics several seconds after the page itself becomes visible. The automation therefore waits for the actual blocking `#uc-overlay` state, dismisses the observed Usercentrics action through the scoped `#uc-close-icon` locator, and verifies that the overlay becomes hidden before interacting with the application.
+Automation should:
 
-The vendor-specific selector is intentionally isolated in the environment-support helper because the observed dismissal action has no reliable semantic role and its visible text can be localized independently of the `/en` route.
-
-Where handling is required, automation should:
-
-- Synchronize on the observable blocking overlay rather than page-load timing
+- Synchronize on observable blocking state rather than page-load timing
 - Avoid arbitrary waits and forced clicks
 - Avoid hard-coded opaque Usercentrics storage values
 - Verify that the blocker is gone before continuing
-- Keep vendor-specific implementation knowledge isolated in one support helper
+- Keep vendor-specific implementation knowledge isolated
 
-Reusable handling may later be moved into common test setup if repetition justifies the abstraction.
+The observed Usercentrics lifecycle and storage investigation are documented in [Usercentrics lifecycle](findings.md#usercentrics-lifecycle). The engineering reasoning for the maintained helper is summarized in [Usercentrics consent](approach.md#usercentrics-consent).
 
-Cookie handling should support the tests rather than become an unnecessary framework of its own.
-
-The late initialization behavior is handled within the initial environment setup by waiting for the observable blocking overlay during its bounded initialization window.
-
-After dismissal, exploratory testing did not show the consent overlay returning during normal reload or same-context navigation, so consent handling is not repeated inside each Page Object action.
-
-This keeps environment setup separate from business behavior while still reproducing a valid user interaction rather than forcing clicks through an active UI layer.
-
-Extended exploratory sessions also surfaced a late NPS/CSAT survey after prolonged browsing. The current suite does not proactively interact with or dismiss that survey because the implemented scenarios normally complete before it appears. If future longer-running scenarios make it a blocker, environment handling should dismiss the prompt without submitting feedback or otherwise changing user state.
+Extended exploration also surfaced late registration and NPS/CSAT prompts. These observations belong to [Late prompts](findings.md#late-prompts); no proactive handler is maintained because the current scenarios normally complete before those prompts interfere.
 
 ## 16. Reliability Strategy
 
@@ -1033,35 +1000,21 @@ hide instability.
 
 ### Accessibility execution readiness
 
-Full-page axe scans have a higher execution cost than the functional scenarios, so accessibility coverage retains a dedicated 60-second timeout.
+Accessibility coverage retains a scoped 60-second timeout and each scan establishes meaningful page readiness before Axe executes. The scenarios remain logically independent rather than using serial mode.
 
-The accessibility scenarios remain logically independent rather than using Playwright serial mode. Before each scan, the test waits for meaningful page readiness: search results must be visible before scanning the results page, and the lot title must be visible after lot navigation before scanning the details page.
-
-Repeated accessibility execution with two workers completed successfully after these readiness changes. This preserves independent failure reporting while avoiding a serial dependency where one failed scan could cause later page contexts to be skipped.
-
-The timeout adjustment remains scoped to accessibility tests rather than applied globally.
+The failure history and evidence behind this policy are summarized in [Accessibility readiness](approach.md#accessibility-readiness) and [Execution observations](findings.md#execution-observations).
 
 ### Internationalization execution budget
 
-The language-persistence scenario performs an additional locale transition before executing the search-to-lot journey.
+The language-persistence scenario uses a scoped 45-second timeout because it includes an additional locale transition before the search-to-lot journey. No global timeout increase or retry behavior is introduced for this case.
 
-Repeated full-suite execution showed that the scenario could intermittently exceed the default 30-second timeout while still progressing through valid localized application states.
-
-The I18N scenario therefore uses a scoped 45-second timeout.
-
-The adjustment remains local to the scenario because the rest of the suite has not demonstrated a general need for a larger execution budget.
-
-Retries and global timeout increases were intentionally avoided.
+The observed timing behavior is captured in [Execution observations](findings.md#execution-observations).
 
 ### Production-conscious default parallelism
 
-The default Chromium configuration intentionally limits local execution to two workers and sets `fullyParallel: false`.
+The default Chromium configuration uses at most two local workers with `fullyParallel: false`, while the dedicated cross-browser configuration uses one worker. These limits keep production traffic bounded and reflect the reliability behavior observed during the challenge.
 
-This keeps production traffic bounded and predictable while still allowing moderate parallel execution across independent test files. CI remains limited to one worker if production-facing execution is later enabled there.
-
-The configuration was validated with the complete current suite after the responsive changes rather than increasing retries or timeouts to compensate for concurrency.
-
-The dedicated cross-browser configuration remains more conservative with one worker because multi-browser concurrency demonstrated a separate, evidence-based reliability risk.
+See [Execution strategy](approach.md#6-execution-strategy), [Execution observations](findings.md#execution-observations), and [ADR 007](adr/007-cross-browser-execution-strategy.md) for the evidence and trade-offs behind these settings.
 
 ## 17. Execution Timing and Performance Considerations
 
@@ -1153,31 +1106,13 @@ Steps should represent meaningful behavior rather than wrapping every individual
 
 ## 19. Known Execution Constraint
 
-During local development, different behavior was observed between browser execution modes.
+Production-facing execution is constrained by the public Catawiki edge layer.
 
-### Headed Chromium
+Headed local browser execution loaded the application successfully, while headless Chromium and a read-only request from a GitHub-hosted runner could receive `Access Denied` / `403 Forbidden`.
 
-The Catawiki application loads and the critical journey executes successfully.
+The maintained suite does not attempt to identify, spoof, or bypass those controls. Production-facing browser and API scenarios therefore remain outside the current GitHub-hosted workflow.
 
-### Headless Chromium
-
-The production edge layer currently responds with an `Access Denied` page during headless execution.
-
-This behavior is considered an environmental or infrastructure constraint rather than a functional product failure.
-
-The suite should not attempt to circumvent anti-automation or production security controls.
-
-Before unattended CI execution against production is enabled, an appropriate execution strategy must be identified.
-
-### GitHub-hosted runners
-
-The initial GitHub Actions execution confirmed an additional production-environment constraint.
-
-Repository setup, dependency installation, and TypeScript validation completed successfully on the GitHub-hosted Ubuntu runner. However, the read-only production API scenario received a `403 Forbidden / Access Denied` response from the production edge layer.
-
-The current hosted workflow therefore does not execute production-facing API or browser scenarios.
-
-This restriction should not be worked around through spoofed client behavior, arbitrary retries, or attempts to bypass the production edge controls.
+The evidence is recorded in [Headless and hosted access](findings.md#headless-and-hosted-access). The resulting engineering decision is explained in [Hosted CI strategy](approach.md#7-hosted-ci-strategy).
 
 ## 20. CI/CD Strategy
 
@@ -1203,13 +1138,9 @@ Playwright test discovery
 └── Cross-browser smoke configuration
 ```
 
-The initial workflow also attempted to execute the pure read-only API scenario. After the production-access restriction was confirmed, the hosted workflow was strengthened with deterministic linting, formatting, schema-validator unit tests and Playwright discovery instead of adding more production traffic.
+The hosted workflow intentionally stops at deterministic repository validation and Playwright discovery. Production-facing API and browser scenarios are excluded because of the observed edge restriction rather than worked around.
 
-Repository checkout, dependency installation, and TypeScript validation completed successfully, but the production API request received a `403 Forbidden / Access Denied` response from the Catawiki production edge layer.
-
-Production-facing API and browser scenarios are therefore intentionally excluded from the current GitHub-hosted workflow.
-
-The workflow should not attempt to bypass this restriction through altered client behavior, spoofed headers, arbitrary retries, or other anti-automation workarounds.
+The underlying observation is documented in [Headless and hosted access](findings.md#headless-and-hosted-access), and the design rationale is described in [Hosted CI strategy](approach.md#7-hosted-ci-strategy).
 
 With an approved execution environment that can access the production application normally, the intended pull-request coverage could expand to include:
 
@@ -1255,13 +1186,9 @@ The nightly pipeline can accept a larger execution cost in exchange for broader 
 
 ### Important constraint
 
-Actual automated execution against the production site depends on using an execution environment accepted by the Catawiki production edge layer.
+Production-facing CI requires an approved execution environment accepted by the Catawiki edge layer. Until that exists, the current GitHub-hosted pipeline provides deterministic repository validation and Playwright discovery, while live production scenarios remain suitable for controlled local execution.
 
-Both local headless browser execution and the initial GitHub-hosted API execution have received `Access Denied` responses.
-
-The suite should not attempt to circumvent these production security controls.
-
-The current GitHub-hosted pipeline therefore provides deterministic static validation, while production-facing automated scenarios remain suitable for controlled local execution or a future approved CI environment.
+See [Headless and hosted access](findings.md#headless-and-hosted-access) for the observed restriction and [Approved CI execution environment](future-opportunities.md#highest-value-next-step) for the next infrastructure step.
 
 ## 21. Cross-Browser Strategy
 
@@ -1299,7 +1226,7 @@ Cross-browser validation
 
 The separation avoids multiplying API, integration, negative, and accessibility scenarios across browsers when those tests do not provide equivalent browser-compatibility value.
 
-Single-worker execution is deliberate. Concurrent multi-browser execution against the production application produced intermittent timeouts, while isolated browser runs and serialized cross-browser execution completed successfully. The dedicated configuration also uses a scoped 45-second test timeout after Firefox repeatedly exhausted the default 30-second journey budget late in the lot-details flow; repeated isolated Firefox and complete cross-browser runs passed after that adjustment.
+Single-worker execution and the scoped 45-second cross-browser timeout are evidence-based reliability decisions rather than general framework defaults. The detailed execution history is kept in [Execution observations](findings.md#execution-observations), and the durable strategy is recorded in [ADR 007](adr/007-cross-browser-execution-strategy.md).
 
 With an approved production-facing CI environment, the cross-browser smoke configuration would be a suitable candidate for scheduled execution.
 
@@ -1459,7 +1386,7 @@ For this reason, the production application remains the system under test.
 
 ## 27. Out of Scope / Future Opportunities
 
-With access to an internal staging environment, documented services and controlled test data, the strategy could be expanded significantly.
+With access to an internal staging environment, documented services and controlled test data, the strategy could be expanded significantly. This section records the test-plan view of deferred scope; the broader evolution path and prioritization are maintained in [Future Opportunities](future-opportunities.md).
 
 Potential future coverage includes:
 
@@ -1488,54 +1415,19 @@ These areas are intentionally documented rather than artificially forced into th
 
 ## 28. Documentation Strategy
 
-Different documentation files serve different purposes in the project.
+The repository documentation is intentionally split by responsibility so that this test plan can remain comprehensive without becoming the source of truth for every implementation detail.
 
-### README
+For a reviewer-oriented navigation map, see the [Documentation Guide](README.md).
 
-Explains how to consume the project:
+- [Root README](../README.md) — project entry point, installation, commands, reports, current CI behavior and key limitations.
+- **This test plan** — scenario scope, priority, status, intended execution context, candidate coverage and rejected/deferred testing ideas.
+- [Engineering Approach](approach.md) — how exploration, architecture and reliability decisions evolved.
+- [Production Findings and Observations](findings.md) — evidence observed from the public Catawiki application, including environment, API, accessibility, responsive and execution behavior.
+- [ADRs](adr/) — durable architectural decisions and their trade-offs.
+- [Future Opportunities](future-opportunities.md) — intentionally deferred improvements and what additional internal access or infrastructure would enable.
+- [API Response Samples](api-samples/README.md) — sanitized examples of observed read-only payloads used for documentation context only.
 
-- What the project is
-- Installation
-- Execution
-- Test commands
-- Architecture overview
-- Reports
-- CI/CD
-- Current limitations
-
-### Testing Approach
-
-Explains how the solution evolved:
-
-- Initial exploration
-- Locator discovery
-- Codegen usage
-- Locator refinement
-- Refactoring decisions
-- Quality expansion reasoning
-
-### Test Plan
-
-Explains:
-
-- What should be tested
-- Why the scenarios were selected
-- Their priority
-- Their execution strategy
-- What was considered but intentionally deferred
-
-### ADRs
-
-Record architectural decisions and their trade-offs.
-
-Current examples include:
-
-- Playwright selection
-- Test layering
-- Page Object Model
-- Production testing guardrails
-
-The documents should complement each other rather than repeat the same information.
+The documents should complement each other rather than repeat complete explanations. Where this plan depends on production evidence or durable architectural reasoning, it links to the canonical supporting document while retaining the scenario-level decision here.
 
 ## 29. AI-Assisted Development
 
