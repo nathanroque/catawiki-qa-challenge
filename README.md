@@ -205,6 +205,12 @@ The single-worker constraint is therefore scoped specifically to cross-browser v
 npx playwright test tests/e2e/search-lot.spec.ts --project=chromium
 ```
 
+### Run unit tests
+
+```bash
+npm run test:unit
+```
+
 ### Run API tests
 
 ```bash
