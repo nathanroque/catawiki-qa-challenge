@@ -21,7 +21,9 @@ High-severity coverage will initially focus on findings classified by axe as:
 - `serious`
 - `critical`
 
-Existing production findings may be recorded as an explicit known-issue baseline after repeated execution confirms that they are consistently present.
+Existing production findings may be recorded as an explicit known-issue baseline after repeated execution confirms that they are consistently present, or when an intermittently observed high-severity rule is explicitly documented as production behavior requiring continued regression visibility.
+
+Intermittent baseline entries must remain explicitly documented as such and should not be treated as consistently reproducible findings.
 
 The baseline will be maintained by axe violation rule ID rather than by exact affected-node count.
 

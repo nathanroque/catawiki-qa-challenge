@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { errors, type Page } from '@playwright/test';
 
 /**
  * Dismisses the Usercentrics consent overlay when it appears.
@@ -16,8 +16,12 @@ export async function dismissCookieConsentIfPresent(page: Page): Promise<void> {
       state: 'visible',
       timeout: 8_000,
     });
-  } catch {
-    return;
+  } catch (error) {
+    if (error instanceof errors.TimeoutError) {
+      return;
+    }
+
+    throw error;
   }
 
   try {

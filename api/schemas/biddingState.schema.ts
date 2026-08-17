@@ -19,7 +19,10 @@ export function validateBiddingStateSchema(body: unknown) {
     const biddingLot = lot as Record<string, unknown>;
 
     expect(Number.isInteger(biddingLot.id)).toBeTruthy();
+    expect(biddingLot.id as number).toBeGreaterThan(0);
+
     expect(Number.isInteger(biddingLot.auction_id)).toBeTruthy();
+    expect(biddingLot.auction_id as number).toBeGreaterThan(0);
 
     const currentBidAmount = biddingLot.current_bid_amount;
 
@@ -43,6 +46,9 @@ export function validateBiddingStateSchema(body: unknown) {
 
     expect(biddingLot.favorite_count as number).toBeGreaterThanOrEqual(0);
 
+    expect(typeof biddingLot.bidding_start_time).toBe('string');
+    expect(typeof biddingLot.bidding_end_time).toBe('string');
+
     const biddingStart = Date.parse(biddingLot.bidding_start_time as string);
 
     const biddingEnd = Date.parse(biddingLot.bidding_end_time as string);
@@ -57,4 +63,5 @@ export function validateBiddingStateSchema(body: unknown) {
   const meta = response.meta as Record<string, unknown>;
 
   expect(typeof meta.time).toBe('number');
+  expect(Number.isFinite(meta.time)).toBeTruthy();
 }
