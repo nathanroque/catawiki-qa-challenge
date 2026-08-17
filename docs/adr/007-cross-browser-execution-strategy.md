@@ -79,4 +79,4 @@ Rejected because retries could hide execution instability rather than make the c
 
 ### Set the entire project to one worker
 
-Rejected because the stronger serialization requirement is specific to cross-browser execution. The normal Chromium suite instead uses a bounded two-worker local configuration, which completed the 19-test suite successfully while avoiding machine-dependent unlimited parallelism.
+Rejected because the stronger serialization requirement is specific to cross-browser execution. The normal Chromium suite instead uses a bounded two-worker local configuration, which completed the 24-test suite successfully while avoiding machine-dependent unlimited parallelism.

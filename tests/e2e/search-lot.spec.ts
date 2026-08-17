@@ -19,14 +19,10 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
 
     await expect(page).toHaveURL(/\/en\/s\?q=Train/);
 
-    const resultCount = await searchResultsPage.lots.count();
-
-    expect(
-      resultCount,
+    await expect(
+      searchResultsPage.getLot(1),
       'Expected at least two search results for "Train"',
-    ).toBeGreaterThanOrEqual(2);
-
-    await expect(searchResultsPage.getLot(1)).toBeVisible();
+    ).toBeVisible();
   });
 
   const { selectedTitle, lotId } =

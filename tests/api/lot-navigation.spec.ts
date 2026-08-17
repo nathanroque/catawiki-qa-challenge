@@ -21,10 +21,13 @@ test('auction navigation remains internally consistent @api', async ({
       const feedBody = await feedResponse.json();
       expect(feedBody.lots.length).toBeGreaterThan(0);
 
+      const discoveryAttempts: string[] = [];
+
       for (const lot of feedBody.lots) {
         const navigationResponse = await api.getLotNavigation(lot.id);
 
         if (!navigationResponse.ok()) {
+          discoveryAttempts.push(`${lot.id}:${navigationResponse.status()}`);
           continue;
         }
 
@@ -37,9 +40,13 @@ test('auction navigation remains internally consistent @api', async ({
             originalNavigation: navigation,
           };
         }
+
+        discoveryAttempts.push(`${lot.id}:no-next-lot`);
       }
 
-      throw new Error('Could not find a feed lot with an adjacent lot');
+      throw new Error(
+        `Could not find a feed lot with an adjacent lot. Attempts: ${discoveryAttempts.join(', ')}`,
+      );
     });
 
   await test.step('Validate original lot navigation state', async () => {
@@ -47,7 +54,7 @@ test('auction navigation remains internally consistent @api', async ({
 
     expect(originalNavigation.total_lots).toBeGreaterThan(0);
 
-    expect(originalNavigation.current_position).toBeLessThanOrEqual(
+    expect(originalNavigation.current_position).toBeLessThan(
       originalNavigation.total_lots,
     );
   });
@@ -72,6 +79,11 @@ test('auction navigation remains internally consistent @api', async ({
     });
 
   await test.step('Validate consistency between adjacent lots', async () => {
+    expect(nextNavigation.current_position).toBeGreaterThanOrEqual(1);
+    expect(nextNavigation.current_position).toBeLessThanOrEqual(
+      nextNavigation.total_lots,
+    );
+
     expect(nextNavigation.current_position).toBe(
       originalNavigation.current_position + 1,
     );

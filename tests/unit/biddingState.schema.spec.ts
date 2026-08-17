@@ -122,4 +122,67 @@ test.describe('validateBiddingStateSchema', () => {
 
     expect(() => validateBiddingStateSchema(body)).toThrow();
   });
+
+  test('rejects non-positive lot and auction IDs', () => {
+    const body = {
+      lots: [
+        {
+          id: 0,
+          auction_id: -1,
+          current_bid_amount: null,
+          favorite_count: 0,
+          bidding_start_time: '2026-08-14T18:00:00Z',
+          bidding_end_time: '2026-08-23T18:08:30Z',
+          closed: false,
+        },
+      ],
+      meta: {
+        time: 1786918982,
+      },
+    };
+
+    expect(() => validateBiddingStateSchema(body)).toThrow();
+  });
+
+  test('rejects non-string bidding timestamps', () => {
+    const body = {
+      lots: [
+        {
+          id: 106096956,
+          auction_id: 1255949,
+          current_bid_amount: null,
+          favorite_count: 0,
+          bidding_start_time: 1786918982,
+          bidding_end_time: '2026-08-23T18:08:30Z',
+          closed: false,
+        },
+      ],
+      meta: {
+        time: 1786918982,
+      },
+    };
+
+    expect(() => validateBiddingStateSchema(body)).toThrow();
+  });
+
+  test('rejects a non-finite meta time', () => {
+    const body = {
+      lots: [
+        {
+          id: 106096956,
+          auction_id: 1255949,
+          current_bid_amount: null,
+          favorite_count: 0,
+          bidding_start_time: '2026-08-14T18:00:00Z',
+          bidding_end_time: '2026-08-23T18:08:30Z',
+          closed: false,
+        },
+      ],
+      meta: {
+        time: Number.NaN,
+      },
+    };
+
+    expect(() => validateBiddingStateSchema(body)).toThrow();
+  });
 });

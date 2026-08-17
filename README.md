@@ -247,13 +247,13 @@ npx playwright test tests/e2e/mobile-search.spec.ts --project=chromium
 ### Run smoke tests in Chromium
 
 ```bash
-npx playwright test --grep @smoke --project=chromium
+npx playwright test --grep '@smoke' --project=chromium
 ```
 
 ### Run tests tagged as API
 
 ```bash
-npx playwright test --grep @api --project=chromium
+npx playwright test --grep '@api' --project=chromium
 ```
 
 ### Explicit headless execution

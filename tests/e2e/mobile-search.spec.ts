@@ -23,14 +23,10 @@ test('user can complete the critical Train journey on a representative mobile de
 
   const { selectedTitle, lotId } =
     await test.step('Validate and capture the second search result', async () => {
-      const resultCount = await searchResultsPage.lots.count();
-
-      expect(
-        resultCount,
+      await expect(
+        searchResultsPage.getLot(1),
         'Expected at least two search results for "Train"',
-      ).toBeGreaterThanOrEqual(2);
-
-      await expect(searchResultsPage.getLot(1)).toBeVisible();
+      ).toBeVisible();
 
       const selectedTitle = await searchResultsPage.getLotTitle(1);
       const lotId = await searchResultsPage.getLotId(1);

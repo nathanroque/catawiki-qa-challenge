@@ -49,4 +49,28 @@ test.describe('validateLotNavigationSchema', () => {
 
     expect(() => validateLotNavigationSchema(body)).toThrow();
   });
+
+  test('rejects non-positive navigation values', () => {
+    const body = {
+      source: 'auction',
+      previous_lot_id: 0,
+      next_lot_id: -1,
+      current_position: 0,
+      total_lots: -1,
+    };
+
+    expect(() => validateLotNavigationSchema(body)).toThrow();
+  });
+
+  test('rejects an empty navigation source', () => {
+    const body = {
+      source: '',
+      previous_lot_id: null,
+      next_lot_id: null,
+      current_position: 1,
+      total_lots: 1,
+    };
+
+    expect(() => validateLotNavigationSchema(body)).toThrow();
+  });
 });
