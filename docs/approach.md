@@ -452,7 +452,7 @@ The representative mobile scenario now validates the same core runtime informati
 - favourite count;
 - current bid.
 
-Both the desktop smoke scenario and the mobile scenario were rerun after the Page Object changes and passed. The mobile scenario was then included in the complete Chromium suite and passed as part of the 19-test run.
+Both the desktop smoke scenario and the mobile scenario were rerun after the Page Object changes and passed. The mobile scenario was then included in the complete Chromium suite and passed as part of the 24-test run.
 
 This remains selective responsive coverage, not a claim of full device compatibility. Broader mobile and tablet matrices remain future work.
 
@@ -470,4 +470,4 @@ CI workers: 1
 
 Two local workers preserve useful execution speed while keeping production traffic modest and predictable. The dedicated cross-browser configuration remains serialized with one worker because that execution mode previously demonstrated concurrency-related instability.
 
-The complete default suite was validated after this change: 19 tests passed with two workers in approximately 1.2 minutes. This provides evidence for the selected limit rather than treating the worker count as an arbitrary configuration preference.
+The complete default suite was validated after this change: 24 tests passed with two workers in approximately 1.2 minutes. This provides evidence for the selected limit rather than treating the worker count as an arbitrary configuration preference.

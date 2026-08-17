@@ -118,7 +118,7 @@ The mobile header keeps the search combobox hidden until the dedicated mobile se
 
 On the lot page, responsive bid representations may coexist in the DOM. An initial attempt to make bid lookup global allowed the mobile test to pass but created a strict-mode ambiguity on desktop because two `Current bid` labels were present. The final helper resolves the visible supported bid label and reads its associated amount.
 
-After this refinement, both the desktop smoke journey and the representative mobile journey passed independently, and the full 19-test Chromium suite passed with two workers.
+After this refinement, both the desktop smoke journey and the representative mobile journey passed independently, and the full 24-test Chromium suite passed with two workers.
 
 This is treated as a responsive-automation finding rather than a product defect: the user-visible behavior remained correct, while the exploration identified assumptions in the test abstraction that were specific to the desktop DOM.
 
