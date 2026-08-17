@@ -17,21 +17,32 @@ export class SearchPage {
   }
 
   /**
-   * Searches for the provided term using the search controls in the page header.
+   * Searches for the provided term using the responsive header search.
    *
-   * @param term Search query to submit.
+   * On smaller layouts, the search input is opened through the mobile
+   * navigation before the term is entered.
+   *
+   * @param term Search term to submit.
    */
   async searchFor(term: string): Promise<void> {
     const header = this.page.getByRole('banner');
-
     const searchInput = header.getByRole('combobox');
 
-    const searchButton = header.getByRole('button', {
-      name: 'Search',
-    });
+    if (!(await searchInput.isVisible())) {
+      await header.locator('button.c-header__mobile-nav__search').click();
+
+      await searchInput.waitFor({
+        state: 'visible',
+      });
+    }
 
     await searchInput.fill(term);
-    await searchButton.click();
+
+    await header
+      .getByRole('button', {
+        name: 'Search',
+      })
+      .click();
   }
   async selectLanguage(currentLocale: string, language: string): Promise<void> {
     const header = this.page.getByRole('banner');

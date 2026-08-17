@@ -47,31 +47,15 @@ Additional locales, currency formatting, date formatting, and broader translatio
 
 During implementation, we observed that search results can differ between locales, so future I18N tests should continue using stable application-owned UI as the oracle rather than assuming identical marketplace content.
 
-### Search result view preference persistence
+### Broader search-result view coverage
 
-Exploratory automation identified both gallery and normal search-result views through the `view-mode-gallery` and `view-mode-normal` controls.
+The maintained P2 suite now includes a focused normal-view scenario. It validates that the second `Train` result remains identifiable and usable after switching presentation mode and that normal view remains active after navigating to the lot and returning, as well as after a reload.
 
-The investigation also exposed a useful framework risk. Both layouts retain the stable `lot-card-container-*` result container, but they render the lot title through different internal structures:
+That implementation also hardened `SearchResultsPage.getLotTitle()` after exploration showed that gallery and normal layouts use different internal title markup while preserving the same stable result-container contract.
 
-```text
-gallery → .c-lot-card__title
-normal  → .c-extended-lot-card__title
-```
+Future work could expand this into a deliberate preference-compatibility matrix covering additional persistence boundaries or both view modes across other important workflows. The persistence mechanism should continue to be treated as an implementation detail unless a product contract defines it.
 
-The original `SearchResultsPage.getLotTitle()` implementation was coupled to the gallery representation and timed out when the same second-result flow was exercised in normal view.
-
-The Page Object was hardened so that title retrieval works with either supported representation. The experimental scenario was then rerun successfully and confirmed that the second `Train` result could still be identified and opened in normal view.
-
-The same exploration also confirmed that normal view remained active after:
-
-- Opening the selected lot and returning to the search results
-- Reloading the search-results page
-
-The persistence mechanism was not established and should not be assumed to be cookies, local storage or any other specific client-side implementation.
-
-Broader permanent coverage could later validate additional persistence boundaries and both presentation modes as part of a deliberate preference-compatibility matrix.
-
-This remains a future opportunity rather than a reason to multiply the current suite. The current work keeps the Page Object layout-tolerant and records the experimentally verified behavior, while broader preference-state regression coverage remains lower priority than the implemented P0 and P1 risks.
+The current scenario is intentionally narrow so that preference testing does not multiply the production-facing suite without a clear risk signal.
 
 ### Additional edge and negative coverage
 
@@ -234,19 +218,20 @@ Future work could include:
 
 Automated scans should not be treated as proof of full accessibility compliance.
 
-### Responsive and mobile viewport coverage
+### Broader responsive and device coverage
 
-The current implemented browser coverage focuses on desktop configurations.
+The maintained suite now samples responsive compatibility with Playwright's `iPhone 13` device profile. The mobile scenario reuses the critical search-to-lot abstractions and validates lot identity, title, favourite count, and current bid.
 
-A future responsive strategy could use Playwright device profiles to validate a small number of high-value mobile and tablet experiences rather than only resizing the desktop viewport.
+Implementation exposed responsive differences in both the header search interaction and bid rendering, which were handled inside the existing Page Objects rather than through device-specific test duplication.
 
-Useful targets could include:
+Future work could add a small risk-based set of additional targets, for example:
 
-- Search interaction on a representative mobile device profile
-- Search-result layout and navigation on tablet-sized experiences
-- Critical lot-detail content remaining reachable and usable at narrower widths
+- a representative tablet profile;
+- another high-value mobile form factor when product analytics justify it;
+- responsive accessibility and reflow checks;
+- selected view-mode/device combinations if those interactions become a demonstrated risk.
 
-This should remain risk-based and selective so that device coverage does not simply multiply the entire suite without a clear compatibility signal.
+The goal should remain representative compatibility coverage rather than multiplying the entire suite across a large device matrix.
 
 ### Real Safari validation
 
@@ -296,7 +281,7 @@ A reasonable next sequence would be:
 2. Run the existing suite automatically.
 3. Publish test reports and diagnostics from CI.
 4. Re-evaluate broader cross-browser execution.
-5. Expand P2 coverage based on real product risk, including preference persistence or responsive behavior where justified.
+5. Expand P2 coverage based on real product risk, including broader preference, device, or responsive matrices only where justified.
 6. Add broader I18N and accessibility coverage.
 7. Introduce authenticated and state-changing scenarios only in a controlled environment.
 8. Add visual, performance, and security testing where appropriate.

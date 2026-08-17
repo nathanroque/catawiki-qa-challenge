@@ -28,7 +28,7 @@ The complete test suite does not need to execute across every browser because AP
 
 Cross-browser validation will use a dedicated Playwright configuration.
 
-The default `playwright.config.ts` remains Chromium-only and retains the normal execution model for the complete suite.
+The default `playwright.config.ts` remains Chromium-only and uses bounded parallelism for the complete suite: `fullyParallel: false`, two local workers, and one CI worker.
 
 `playwright.cross-browser.config.ts`:
 
@@ -43,7 +43,7 @@ The existing P0 test implementation is reused across browser projects rather tha
 
 ### Positive
 
-- Normal suite execution remains fast and predictable.
+- Normal suite execution remains reasonably fast while production-facing concurrency is bounded and predictable.
 - Running `playwright test` does not unexpectedly multiply the complete suite across three browsers.
 - Cross-browser coverage focuses on the highest-value user journey.
 - Browser-specific test duplication is avoided.
@@ -79,4 +79,4 @@ Rejected because retries could hide execution instability rather than make the c
 
 ### Set the entire project to one worker
 
-Rejected because the constraint is specific to cross-browser execution and should not unnecessarily reduce parallelism for the normal Chromium suite.
+Rejected because the stronger serialization requirement is specific to cross-browser execution. The normal Chromium suite instead uses a bounded two-worker local configuration, which completed the 19-test suite successfully while avoiding machine-dependent unlimited parallelism.

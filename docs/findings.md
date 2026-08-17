@@ -110,6 +110,26 @@ Search results, lot identifiers, bids, favourite counts and auction state change
 
 Tests therefore discover values at runtime and prefer structural or relational assertions over hard-coded production data.
 
+### Responsive search and bid rendering
+
+Representative mobile exploration with Playwright's `iPhone 13` device profile exposed two implementation differences from the desktop journey.
+
+The mobile header keeps the search combobox hidden until the dedicated mobile search control is opened. The shared `SearchPage` abstraction was updated to support both the directly visible desktop input and the mobile reveal interaction.
+
+On the lot page, responsive bid representations may coexist in the DOM. An initial attempt to make bid lookup global allowed the mobile test to pass but created a strict-mode ambiguity on desktop because two `Current bid` labels were present. The final helper resolves the visible supported bid label and reads its associated amount.
+
+After this refinement, both the desktop smoke journey and the representative mobile journey passed independently, and the full 19-test Chromium suite passed with two workers.
+
+This is treated as a responsive-automation finding rather than a product defect: the user-visible behavior remained correct, while the exploration identified assumptions in the test abstraction that were specific to the desktop DOM.
+
+### Search-result presentation modes
+
+The search page exposes gallery and normal result presentations. Both preserve the stable `lot-card-container-*` identity contract, but the lot title is rendered through different internal markup.
+
+The original title helper supported only the gallery representation and failed when the second `Train` result was inspected in normal view. The Page Object was hardened to support both observed title structures.
+
+The maintained P2 scenario also observed that normal view remained active after opening a lot and returning to search results and after reloading the results page. The persistence mechanism was not investigated and is not assumed.
+
 ## API and Network Observations
 
 ### Server-rendered search flow
@@ -249,4 +269,4 @@ The cross-browser configuration was given a scoped 45-second timeout rather than
 
 Validation after the change completed successfully in three isolated Firefox runs and three complete Chromium/Firefox/WebKit runs.
 
-The normal Chromium suite retains its existing execution model.
+The normal Chromium suite now uses controlled parallelism with `fullyParallel: false` and at most two local workers, while CI remains limited to one worker.

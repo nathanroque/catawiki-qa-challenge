@@ -73,7 +73,7 @@ test('user can search for Train and inspect the second lot @smoke @e2e', async (
   });
 });
 
-test('second Train result remains usable in normal view @e2e @experimental', async ({
+test('second Train result remains usable in normal view @e2e @view-mode', async ({
   page,
 }) => {
   const searchPage = new SearchPage(page);

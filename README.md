@@ -20,6 +20,8 @@ The implemented coverage currently includes:
   - Search results
   - Lot details
 - Cross-browser smoke validation across Chromium, Firefox and WebKit
+- Alternate search-result view validation, including preference persistence through navigation and reload
+- Representative mobile validation using Playwright's `iPhone 13` device profile while reusing the critical journey assertions
 - Deterministic GitHub Actions quality gates for type checking, linting, formatting, schema unit tests and Playwright test discovery
 - Internationalization validation for language selection and locale persistence across the critical journey
 
@@ -74,7 +76,7 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   ├── SearchPage.ts
 │   └── SearchResultsPage.ts
 │
-├── suport/
+├── support/
 │   └── cookie-consent.ts
 │
 ├── tests/
@@ -82,8 +84,9 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 │   │   ├── accessibility.spec.ts
 │   │   └── known-violations.ts
 │   ├── api/
-│   │   └── lotNavigation.schema.ts
+│   │   └── lot-navigation.spec.ts
 │   ├── e2e/
+│   │   ├── mobile-search.spec.ts
 │   │   └── search-lot.spec.ts
 │   ├── i18n/
 │   │   └── language-persistence.spec.ts
@@ -115,7 +118,7 @@ See [`docs/test-plan.md`](docs/test-plan.md) for the complete test strategy.
 - `tests/unit/` contains deterministic unit coverage for runtime schema validators.
 - `tests/accessibility/` contains automated accessibility regression checks.
 - `docs/` contains the test strategy, investigation findings and architectural decisions.
-- `playwright.config.ts` defines the default Chromium execution.
+- `playwright.config.ts` defines the default Chromium execution with bounded local parallelism.
 - `playwright.cross-browser.config.ts` defines serialized smoke execution across Chromium, Firefox and WebKit.
 - `tests/i18n/` contains internationalization and locale-persistence coverage.
 
@@ -175,7 +178,7 @@ npm run test:unit
 npm test
 ```
 
-The default Playwright configuration runs the implemented suite in Chromium.
+The default Playwright configuration runs the implemented suite in Chromium with `fullyParallel: false` and at most two local workers. This keeps production traffic bounded while preserving moderate parallel execution across independent test files.
 
 Browser-based tests run headed locally by default because headless navigation to the Catawiki production application may receive an `Access Denied` response from the production edge layer.
 
@@ -197,7 +200,7 @@ Cross-browser execution uses a dedicated Playwright configuration, a single work
 
 During exploratory execution, each browser completed the critical journey successfully when executed independently. Concurrent multi-browser execution produced intermittent timing failures, while serialized execution completed successfully. A later Firefox timeout near the end of the live journey showed that the default 30-second budget could still be marginal; a scoped 45-second cross-browser timeout subsequently passed repeated isolated Firefox and complete cross-browser runs.
 
-The single-worker constraint is therefore scoped specifically to cross-browser validation rather than reducing parallelism across the default suite.
+The single-worker constraint is therefore scoped specifically to cross-browser validation. The default suite remains moderately parallel with a deliberate two-worker local limit.
 
 ### Run the critical E2E journey in Chromium
 
@@ -233,6 +236,12 @@ npx playwright test tests/accessibility --project=chromium
 
 ```bash
 npx playwright test tests/i18n --project=chromium
+```
+
+### Run representative mobile coverage
+
+```bash
+npx playwright test tests/e2e/mobile-search.spec.ts --project=chromium
 ```
 
 ### Run smoke tests in Chromium
@@ -409,6 +418,16 @@ Cross-browser smoke execution uses one worker because concurrent multi-browser e
 
 The same browser scenarios completed successfully when executed independently and when the cross-browser run was serialized.
 
+## Responsive and View-Mode Coverage
+
+Two bounded P2 scenarios extend the critical flow without multiplying the entire suite across every presentation or device.
+
+The alternate-view scenario switches search results from gallery to normal mode, verifies that the second result remains identifiable and usable, and checks that the selected view persists after navigating back and reloading. Exploration exposed a real Page Object coupling to gallery-specific title markup, which was then generalized while preserving the stable lot-container identity contract.
+
+The mobile scenario uses Playwright's `iPhone 13` device profile and reuses the same business assertions as the desktop critical journey. Exploration showed that the mobile header requires opening the search UI before the combobox becomes available and that multiple responsive bid representations may coexist in the DOM. The Page Objects encapsulate those differences by opening the mobile search when necessary and resolving the visible bid representation.
+
+These scenarios are compatibility signals rather than claims of complete device or responsive coverage.
+
 ## Internationalization Testing
 
 The implemented internationalization scenario validates that a selected locale remains active throughout the critical search-to-lot journey.
@@ -436,6 +455,8 @@ Examples include:
 - Cookie consent handling waits for the actual Usercentrics blocking overlay, dismisses it through the observed public action and verifies that the overlay is gone.
 - The consent helper accounts for Usercentrics initializing several seconds after navigation without using fixed sleeps, forced clicks or hard-coded internal consent state.
 - Mandatory API failures include HTTP status and response information for easier diagnosis.
+- Responsive Page Object behavior is based on observed UI state: mobile search is opened only when the combobox is hidden, and bid extraction resolves the visible responsive representation instead of assuming a desktop-only container.
+- Default Chromium execution uses `fullyParallel: false` with at most two local workers to keep production traffic bounded.
 - Cross-browser smoke execution uses a single worker after concurrent browser execution demonstrated intermittent timing instability, with a scoped 45-second timeout for the longer live journey.
 
 Local execution uses no automatic retries.
@@ -515,7 +536,10 @@ With more time or access to a controlled internal environment, useful extensions
 - Deterministic visual regression coverage
 - Authenticated user journeys with dedicated test accounts
 - Controlled state-changing API scenarios
+- Broader mobile and tablet device coverage
+- Broader search-result view-mode and preference-persistence coverage
+- Search sorting and filtering state validation
 - Broader CI execution in an approved environment
 - Performance testing against a non-production system with explicit authorization
 
-These areas remain intentionally secondary to the implemented P0 and P1 coverage.
+These areas remain intentionally secondary to the implemented risk-based suite and should only be added when they provide distinct confidence at acceptable cost and production risk.
